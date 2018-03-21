@@ -1,0 +1,17 @@
+*.h5
+*.csv
+*.pyc
+*.golds
+*.preds
+*.swp
+*.tsv
+.ipynb_checkpoints/*
+notebooks/.ipynb_checkpoints/*
+saved_models/*
+bin/*
+include/*
+lib/*
+share/*
+pip-selfcheck.json
+mimicdata/mimic2/*
+mimicdata/mimic3/*
