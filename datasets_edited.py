@@ -33,7 +33,7 @@ class Batch:
         labelled = False
         desc_vecs = []
         #get codes as a multi-hot vector
-        for l in row[3].split(';'):
+        for l in row[3].split(';'): # COMES FROM concat_and_split.concat_data()
             if l in c2ind.keys():
                 code = int(c2ind[l])
                 labels_idx[code] = 1
