@@ -56,29 +56,25 @@ class VanillaConv(BaseModel):
     def __init__(self, embed_file, kernel_size, num_filter_maps, gpu=True, dicts=None, embed_size=100, dropout=0.5):
         super(VanillaConv, self).__init__(embed_file, dicts, dropout=dropout, embed_size=embed_size) 
         
-        #initialize conv layer as in 2.1
-        # PyTorch SYNTAX: 
-        # self.embed_size = in_channels
-        # num_filter_maps = out_channels
-        # kernel_size of 3 = trigrams
+        #initialize conv layer
         self.conv = nn.Conv1d(self.embed_size, num_filter_maps, kernel_size=kernel_size)
         xavier_uniform(self.conv.weight)
 
         #linear output
-        self.fc = nn.Linear(num_filter_maps, ) # Need to make size based on number of kernels
+        self.fc = nn.Linear(num_filter_maps, 1) 
         xavier_uniform(self.fc.weight)
 
-    def forward(self, x, y, target, desc_data=None, get_attention=False):
+    def forward(self, x, target):
         #embed
         x = self.embed(x)
         x = self.embed_drop(x)
-        x = x.transpose(1, 2)
+        x = x.transpose(1, 2) # ?
         
         #conv/max-pooling
         c = self.conv(x)
         
-        x = F.max_pool1d(F.tanh(c), kernel_size=c.size()[2])
-        x = x.squeeze(dim=2) # SQUEEZE?
+        x = F.max_pool1d(F.tanh(c), kernel_size=c.size()[2]) # RELU OR ELU > tanh?
+        x = x.squeeze(dim=2) # squeeze reduces singleton dimensions
 
         #linear output
         x = self.fc(x)
