@@ -121,8 +121,8 @@ def early_stop(metrics_hist, criterion, patience):
     if not np.all(np.isnan(metrics_hist[criterion])):
         if criterion == 'loss-dev': 
             
-            ### EPOCH NUM W/ MIN DEV LOSS < (CURR EPOCH NUM - PATIENCE) ?? RETURNS ANSWER AS BOOL
-            ### EX: 5 < 9 - 3 = TRUE = EARLY STOPPING 
+            ### EPOCH NUM W/ MIN DEV LOSS < (CURR EPOCH NUM - PATIENCE) ?? RETURNS ANSWER AS BOOL --> IF TRUE, STOP TRAINING
+            ### EX: 5 < 9 - 3 = TRUE = EARLY STOP
             return np.nanargmin(metrics_hist[criterion]) < len(metrics_hist[criterion]) - patience
         else:
             
@@ -159,7 +159,7 @@ def one_epoch(model, optimizer, epoch, n_epochs, batch_size, data_path, testing,
 #            unseen_code_inds = set()
 
 
-    fold = 'test' if version == 'mimic2' else 'dev'
+    fold = 'test' if version == 'mimic2' else 'dev' # LIKELY DONT NEED
     
 #    if epoch == n_epochs - 1:
 #        print("last epoch: testing on test and train sets")
@@ -351,7 +351,7 @@ if __name__ == "__main__":
     parser.add_argument("data_path", type=str,
                         help="path to a file containing sorted train data. dev/test splits assumed to have same name format with 'train' replaced by 'dev' and 'test'")
     parser.add_argument("vocab_path", type=str, help="path to a file holding vocab word list for discretizing words")
-#    parser.add_argument("Y", type=str, help="size of label space")
+    parser.add_argument("Y", type=str, help="size of label space")
     parser.add_argument("model", type=str, choices=["cnn_vanilla", "rnn", "conv_attn", "multi_conv_attn", "saved"], help="model")
     parser.add_argument("n_epochs", type=int, help="number of epochs to train")
     parser.add_argument("--embed-file", type=str, required=False, dest="embed_file",
