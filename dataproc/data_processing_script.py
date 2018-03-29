@@ -1,7 +1,7 @@
 import sys
-import datasets
-from learn import models
-import log_reg
+from datasets import datasets
+#Change the imports
+from models import models_edited
 from dataproc import extract_wvs
 from dataproc import get_discharge_summaries
 from dataproc import concat_and_split
@@ -31,7 +31,7 @@ if __name__ == "__main__":
 
     #Defining variables
     Y = 'full' #use all available labels in the dataset for prediction
-    notes_file = '%s/NOTEEVENTS_2000.csv' % MIMIC_3_DIR # raw note events downloaded from MIMIC-III
+    notes_file = '%s/NOTEEVENTS.csv' % MIMIC_3_DIR # raw note events downloaded from MIMIC-III
     vocab_size = 'full' #don't limit the vocab size to a specific number
     vocab_min = 3 #discard tokens appearing in fewer than this many documents
 
