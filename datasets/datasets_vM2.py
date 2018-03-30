@@ -14,11 +14,8 @@ class Batch:
         self.docs = []
         self.labels = []
         self.hadm_ids = []
-        #self.code_set = set()
-        self.length = 0
-        self.max_length = MAX_LENGTH
-        #self.desc_embed = desc_embed
-        #self.descs = []
+        self.max_length = 0 # Max length of doc in current batch
+        self.cutoff_length = 500
 
     def add_instance(self, row, w2ind):
         """
@@ -26,39 +23,41 @@ class Batch:
         """
         #labels = set()
         hadm_id = int(row[1])
-        text = row[2]
+        text = row[3] # SHOULD BE 2 WHEN CHARTTIME IS REMOVED
         
         #length = int(row[4]) # WHERE DOES THIS COME FROM?
         
-        label = int(row[3]) # NEW --> PUT LABEL IN ith (3rd?) COLUMN of FINAL DATASET
+#        label = int(row[3]) # NEW --> PUT LABEL IN ith (3rd?) COLUMN of FINAL DATASET
+        label = np.random.randint(0,1) # TEMP
                 
         #OOV words are given a unique index at end of vocab lookup
         text = [int(w2ind[w]) if w in w2ind else len(w2ind)+1 for w in text.split()]
         
         # ADDED TO REPLACE AMBIGUOUS LENGTH ASSIGNMENT ABOVE
         length = len(text)
-        
+                
+        #reset length
+        self.max_length = max(self.max_length, length) # NEED TO PAD TO EITHER MAX LENGTH OR LONGEST DOC LENGTH (?)
+                
         #truncate long documents
-        if len(text) > self.max_length:
-            text = text[:self.max_length]
+        if len(text) > self.cutoff_length:
+            text = text[:self.cutoff_length]
 
         #build instance
         self.docs.append(text)
         self.labels.append(label)
         self.hadm_ids.append(hadm_id)
                 
-        #reset length
-        self.length = min(self.max_length, length) # NEED TO PAD TO EITHER MAX LENGTH OR LONGEST DOC LENGTH (?)
-           
         
     def pad_docs(self):
         #pad all docs to have self.length
         padded_docs = []
+        final_max_length = min(self.max_length, self.cutoff_length) # Either cutoff_length or length of longest doc < cutoff_length
         for doc in self.docs:
-            if len(doc) < self.length:
-                doc.extend([0] * (self.length - len(doc)))
+            if len(doc) < final_max_length:
+                doc.extend([0] * (final_max_length - len(doc)))
             padded_docs.append(doc)
-        self.docs = padded_docs
+        self.docs = self.docs
 
     def to_ret(self):
         return np.array(self.docs), np.array(self.labels), np.array(self.hadm_ids) #, self.code_set, np.array(self.descs)

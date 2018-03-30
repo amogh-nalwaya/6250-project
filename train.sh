@@ -1,0 +1,1 @@
+python training/training_vM3.py ../../../Data/disch_full.csv ../../../Data/vocab.csv conv_encoder 2 --kernel-sizes 3 --num-filter-maps 5 --dropout 0.2 --lr 0.0001 --embed-file ../../../Data/processed_full.embed

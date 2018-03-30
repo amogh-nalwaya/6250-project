@@ -12,7 +12,8 @@ import random
 import sys
 import time
 
-sys.path.append('../')
+sys.path.append("/home/miller/Documents/BDH NLP/Code/Github/6250-project/")
+sys.path.append("/home/miller/Documents/BDH NLP/Code/Github/6250-project/datasets/")
 from constants import *
 from dataproc import extract_wvs
 
@@ -28,12 +29,15 @@ class BaseModel(nn.Module):
         if embed_file:
             print("loading pretrained embeddings...")
             W = torch.Tensor(extract_wvs.load_embeddings(embed_file))
+            print("Size of embedding matrix")
+            print(W.size())
             self.embed = nn.Embedding(W.size()[0], W.size()[1])
             self.embed.weight.data = W.clone()
             
         else:
             #add 2 to include UNK and PAD
 #            vocab_size = len(dicts[0])
+#            print("Vocab size: " + str(vocab_size))
             vocab_size = 10 # TEMP
             self.embed = nn.Embedding(vocab_size+2, embed_size)
 
@@ -44,14 +48,13 @@ class BaseModel(nn.Module):
         loss = F.binary_cross_entropy(yhat, target)
 
         #keep track of this while training
-#        print("loss: %.5f" % loss.data[0])
+        print("loss: %.5f" % loss.data[0])
 
         return loss
 
     def params_to_optimize(self):
         return self.parameters()
-    
-    
+        
 class ConvEncoder(BaseModel):
 
     def __init__(self, embed_file, kernel_sizes, num_filter_maps, gpu=True, dicts=None, embed_size=100, dropout=0.5, conv_activation = "selu"):
@@ -63,10 +66,13 @@ class ConvEncoder(BaseModel):
         self.conv_activation = getattr(F, conv_activation) # Equivalent to F.[conv_activation]
                 
         # Initializing convolutional layer(s)
-        self.conv_layers = [nn.Conv1d(in_channels=embed_size,
-                                out_channels=num_filter_maps,
-                                kernel_size=kernel_size)
-                                for kernel_size in kernel_sizes]
+#        self.conv_layers = [nn.Conv1d(in_channels=embed_size, out_channels=num_filter_maps, 
+#                            kernel_size=int(kernel_size)) if len(kernel_sizes) > 1 
+#                            else nn.Conv1d(in_channels=embed_size, out_channels=num_filter_maps,
+#                            kernel_size=int(kernel_sizes[0])) for kernel_size in kernel_sizes]
+                            
+        self.conv_layers = [nn.Conv1d(in_channels=embed_size, out_channels=num_filter_maps, 
+                            kernel_size=int(kernel_size)) for kernel_size in kernel_sizes]
         
         for i, conv_layer in enumerate(self.conv_layers):
             self.add_module('conv_%d' % i, conv_layer) # Add convolutional modules, one for each kernel size
@@ -82,9 +88,9 @@ class ConvEncoder(BaseModel):
     def forward(self, x, target):
         
         #embed
-#        x = self.embed(x)
+        x = self.embed(x)
 #        x = self.embed_drop(x)
-#        x = x.transpose(1, 2) # Transposing from word vectors as rows --> word vectors as columns  ???
+        x = x.transpose(1, 2) # Transposing from word vectors as rows --> word vectors as columns  ???
                               
         filter_outputs = []
         for i in range(len(self.conv_layers)):
@@ -111,46 +117,44 @@ class ConvEncoder(BaseModel):
         #final sigmoid to get predictions
         yhat = F.sigmoid(x)
         y = yhat.squeeze()
-#        print(y.size())
         loss = self.get_loss(y, target)
         return y, loss
 
 ########################################
 
-### Testing ConvEnc Class
+if __name__ == "__main__":
 
-# Initializing fake data
-
-import time
-
-embed_size = 3
-num_docs = 2
-doc_len = 4
-num_feat_maps = 3
-kernels = [3]
-
-data = np.random.random(embed_size * num_docs * doc_len).reshape(num_docs,embed_size,doc_len)
-x = Variable(torch.FloatTensor(data))
-y = Variable(torch.FloatTensor(np.random.random(num_docs)), requires_grad=False)
-
-start = time.time()
-
-# Initializing model and optimizer
-model = ConvEnc(False, kernels, num_feat_maps, True, None, embed_size, 0.5, "selu")
-optimizer = Adam(model.params_to_optimize())
-model.train() # PUTS MODEL IN TRAIN MODE 
+    ### Testing ConvEnc Class
     
-for i in range(10):
-           
-    optimizer.zero_grad()
+    # Initializing fake data    
+    embed_size = 30
+    num_docs = 20
+    doc_len = 40
+    num_feat_maps = 30
+    kernels = [3]
     
-    pred, loss = model(x,y)      # FORWARD PASS
+    data = np.random.random(embed_size * num_docs * doc_len).reshape(num_docs,embed_size,doc_len)
+    x = Variable(torch.FloatTensor(data))
+    y = Variable(torch.FloatTensor(np.random.random(num_docs)), requires_grad=False)
     
-    loss.backward()
-    optimizer.step()
-
-end = time.time()
-print(end-start)
+    start = time.time()
+    
+    # Initializing model and optimizer
+    model = ConvEncoder(False, kernels, num_feat_maps, True, None, embed_size, 0.5, "selu")
+    optimizer = Adam(model.params_to_optimize())
+    model.train() # PUTS MODEL IN TRAIN MODE 
+        
+    for i in range(10):
+               
+        optimizer.zero_grad()
+        
+        pred, loss = model(x,y)      # FORWARD PASS
+        
+        loss.backward()
+        optimizer.step()
+    
+    end = time.time()
+    print(end-start)
 
 
 

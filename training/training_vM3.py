@@ -9,25 +9,26 @@ import csv
 import argparse
 import os 
 import numpy as np
-import operator
-import random
 import sys
 import time
 from tqdm import tqdm
 from collections import defaultdict
 
+# Adding path to import files from --> need to make more general, add to constants.py
+sys.path.append("/home/miller/Documents/BDH NLP/Code/Github/6250-project/")
+sys.path.append("/home/miller/Documents/BDH NLP/Code/Github/6250-project/datasets/")
+
 from constants import *
-import datasets
+import datasets_vM2 as datasets
 import evaluation
-import interpret
 import persistence
-import learn.models as models
-import learn.tools as tools
+from models import models_vM4 as models
+import tools
 
 def main(args):
     start = time.time()
-    args, model, optimizer, params, freq_params, dicts = init(args)
-    epochs_trained = train_epochs(args, model, optimizer, params, freq_params, dicts)
+    args, model, optimizer, params, dicts = init(args)
+    epochs_trained = train_epochs(args, model, optimizer, params, dicts)
     print("TOTAL ELAPSED TIME FOR %s MODEL AND %d EPOCHS: %f" % (args.model, epochs_trained, time.time() - start))
 
 def init(args):
@@ -66,7 +67,7 @@ def train_epochs(args, model, optimizer, params, dicts):
         #only test on train/test set on very last epoch
         if epoch == 0 and not args.test_model:
             model_dir = os.path.join(MODEL_DIR, '_'.join([args.model, time.strftime('%b_%d_%H:%M', time.gmtime())]))
-            os.mkdir(model_dir)
+            os.mkdir(model_dir) 
             
         elif args.test_model:
             
@@ -135,6 +136,7 @@ def one_epoch(model, optimizer, epoch, n_epochs, batch_size, data_path, testing,
         loss = np.nan
 
 #    fold = 'test' if version == 'mimic2' else 'dev' # LIKELY DONT NEED
+    fold = "val"
 
     #test on dev --> NEED TO MAKE SURE THIS IS HAPPENING ON EVERY EPOCH, PROBLY IS
     metrics = test(model, epoch, batch_size, data_path, fold, gpu, dicts, samples, model_dir, testing, debug)
@@ -178,19 +180,25 @@ def train(model, optimizer, epoch, batch_size, data_path, gpu, dicts, debug, qui
 
     model.train() # PUTS MODEL IN TRAIN MODE --> don't need to return the model?
     
+    token_list = []
+               
     gen = datasets.data_generator(data_path, dicts, batch_size)
     for batch_idx, tup in tqdm(enumerate(gen)):
+        
         if debug and batch_idx > 50: # LIKELY NOT NEEDED
             break
-        data, target, _ = tup
+        
+        data, target, hadm = tup
+                
         data, target = Variable(torch.LongTensor(data)), Variable(torch.FloatTensor(target))
-
+        
         if gpu:
             data = data.cuda()
             target = target.cuda()
+            
         optimizer.zero_grad()
 
-        output, loss, _ = model(data, target) # FORWARD PASS
+        output, loss = model(data, target) # FORWARD PASS
 
         loss.backward()
         optimizer.step()
@@ -201,7 +209,7 @@ def train(model, optimizer, epoch, batch_size, data_path, gpu, dicts, debug, qui
             #print the average loss of the last 100 batches
             print("Train epoch: {} [batch #{}, batch_size {}, seq length {}]\tLoss: {:.6f}".format(
                 epoch+1, batch_idx, data.size()[0], data.size()[1], np.mean(losses[-100:])))
-#    return losses, unseen_code_inds
+
     return losses
 
 
@@ -282,14 +290,14 @@ if __name__ == "__main__":
     parser.add_argument("data_path", type=str,
                         help="path to a file containing sorted train data. dev/test splits assumed to have same name format with 'train' replaced by 'dev' and 'test'")
     parser.add_argument("vocab_path", type=str, help="path to a file holding vocab word list for discretizing words")
-    parser.add_argument("model", type=str, choices=["cnn_vanilla", "rnn", "conv_attn", "multi_conv_attn", "saved"], help="model")
+    parser.add_argument("model", type=str, choices=["conv_encoder", "rnn", "conv_attn", "multi_conv_attn", "saved"], help="model")
     parser.add_argument("n_epochs", type=int, help="number of epochs to train")
     parser.add_argument("--embed-file", type=str, required=False, dest="embed_file",
                         help="path to a file holding pre-trained embeddings")
     parser.add_argument("--embed-size", type=int, required=False, dest="embed_size", default=100,
                         help="size of embedding dimension. (default: 100)")
-    parser.add_argument("--kernel-sizes", type=list, required=False, dest="kernel_sizes", default=[3],
-                        help="List of size(s) of convolution filter(s)/kernel(s) to use. Ex: [3,4,5])")
+    parser.add_argument("--kernel-sizes", type=list, required=False, dest="kernel_sizes", default=3,
+                        help="List of size(s) of convolution filter(s)/kernel(s) to use. Ex: 3,4,5)")
     parser.add_argument("--num-filter-maps", type=int, required=False, dest="num_filter_maps", default=50,
                         help="size of conv output (default: 50)")
     parser.add_argument("--conv-activation", type=str, required=False, dest="conv_activation", default="selu",
