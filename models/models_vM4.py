@@ -59,29 +59,17 @@ class ConvEnc(BaseModel):
         
         self.kernel_sizes = kernel_sizes        
         
-        # Setting activation on convolutional layer
-        if conv_activation == "relu":
-            self.conv_activation = F.relu
-        if conv_activation == "elu":
-            self.conv_activation = F.elu
-        if conv_activation == "selu":
-            self.conv_activation = F.selu
-        if conv_activation == "tanh":
-            self.conv_activation = F.tanh
-        
+        # Setting non-linear activation on feature maps
+        self.conv_activation = getattr(F, conv_activation) # Equivalent to F.[conv_activation]
+                
         # Initializing convolutional layer(s)
-        if len(self.kernel_sizes) == 0: # If only one filter/kernel size..
+        self.conv_layers = [nn.Conv1d(in_channels=embed_size,
+                                out_channels=num_filter_maps,
+                                kernel_size=kernel_size)
+                                for kernel_size in kernel_sizes]
         
-            self.conv = nn.Conv1d(self.embed_size, num_filter_maps, kernel_size=kernel_sizes)
-            xavier_uniform(self.conv.weight)
-            
-        else: # If multiple filter sizes..
-            self.conv_layers = [nn.Conv1d(in_channels=embed_size,
-                                    out_channels=num_filter_maps,
-                                    kernel_size=kernel_size)
-                                    for kernel_size in kernel_sizes]
-            for i, conv_layer in enumerate(self.conv_layers):
-                self.add_module('conv_%d' % i, conv_layer)
+        for i, conv_layer in enumerate(self.conv_layers):
+            self.add_module('conv_%d' % i, conv_layer) # Add convolutional modules, one for each kernel size
             
         # dropout
         self.dropout = nn.Dropout(p=dropout)
@@ -97,27 +85,24 @@ class ConvEnc(BaseModel):
 #        x = self.embed(x)
 #        x = self.embed_drop(x)
 #        x = x.transpose(1, 2) # Transposing from word vectors as rows --> word vectors as columns  ???
-                  
-        if len(self.kernel_sizes) == 0: # If only one filter..
-                                
-            #conv/max-pooling
-            c = self.conv(x)
-            x = F.max_pool1d(self.conv_activation(c), kernel_size=c.size()[2]) # RELU OR ELU > tanh?
-            x = x.squeeze(dim=2) # squeeze eliminates singleton dimensions
-
-        else:
-            
-            filter_outputs = []
-            for i in range(len(self.conv_layers)):
-                conv_layer = getattr(self, 'conv_{}'.format(i))
-                filter_outputs.append(
-                        self.conv_activation(conv_layer(x)).max(dim=2)[0])
-            
-#            print(len(filter_outputs))
-#            print(filter_outputs[:3])
-            
-            # max-pooling
-            x = torch.cat(filter_outputs, dim=1) if len(filter_outputs) > 1 else filter_outputs[0]
+                              
+        filter_outputs = []
+        for i in range(len(self.conv_layers)):
+            conv_layer = getattr(self, 'conv_{}'.format(i)) # Equivalent to self.conv_i
+ 
+#            print(self.conv_activation(conv_layer(x)))
+#            print("------------------------------------")            
+#            print(self.conv_activation(conv_layer(x)).max(dim=2))
+#            print("------------------------------------")            
+#            print(self.conv_activation(conv_layer(x)).max(dim=2)[0])
+#            print("************************************")
+#            time.sleep(30)        
+           
+            filter_outputs.append(
+                    self.conv_activation(conv_layer(x)).max(dim=2)[0]) # .max() returns 2 arrays; 0. max vals, 1. argmax (max indices across desired dimension --> dim=2 is across columns in 3d tensor)
+                
+        # max-pooling
+        x = torch.cat(filter_outputs, dim=1) if len(filter_outputs) > 1 else filter_outputs[0]
 
         #linear output
         x = self.dropout(x) # Multiplying by 2 when dropout = 0.5? Should test
@@ -136,10 +121,12 @@ class ConvEnc(BaseModel):
 
 # Initializing fake data
 
-embed_size = 100
-num_docs = 150
-doc_len = 20
-num_feat_maps = 5
+import time
+
+embed_size = 3
+num_docs = 2
+doc_len = 4
+num_feat_maps = 3
 kernels = [3]
 
 data = np.random.random(embed_size * num_docs * doc_len).reshape(num_docs,embed_size,doc_len)
@@ -153,8 +140,7 @@ model = ConvEnc(False, kernels, num_feat_maps, True, None, embed_size, 0.5, "sel
 optimizer = Adam(model.params_to_optimize())
 model.train() # PUTS MODEL IN TRAIN MODE 
     
-      
-for i in range(1000):
+for i in range(10):
            
     optimizer.zero_grad()
     
@@ -162,27 +148,11 @@ for i in range(1000):
     
     loss.backward()
     optimizer.step()
-    
+
 end = time.time()
 print(end-start)
 
-########################################
 
-### Max pool --> dropout --> FC  Example
-data = np.random.random(8).reshape(2,2,2)
-test = Variable(torch.FloatTensor(data))
-drop = nn.Dropout(p=0.5)
-fc = nn.Linear(2, 1) 
-
-x = F.max_pool1d(test, kernel_size=test.size()[2]) # RELU OR ELU > tanh?
-           
-x_sq = x.squeeze(dim=2)
-
-drop_x = drop(x_sq)
-
-fc_x = fc(drop_x)
-
-F.sigmoid(fc_x)
 
 
 

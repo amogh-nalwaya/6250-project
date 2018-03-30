@@ -311,8 +311,8 @@ if __name__ == "__main__":
                         help="List of size(s) of convolution filter(s)/kernel(s) to use. Ex: [3,4,5])")
     parser.add_argument("--num-filter-maps", type=int, required=False, dest="num_filter_maps", default=50,
                         help="size of conv output (default: 50)")
-    parser.add_argument("--conv-activation", type=str, required=False, dest="conv_activation", default="relu",
-                        help="non-linear activation to be applied to output of convolution (default: relu)")
+    parser.add_argument("--conv-activation", type=str, required=False, dest="conv_activation", default="selu",
+                        help="non-linear activation to be applied to feature maps. Must match PyTorch documentation for torch.nn.functional.[conv_activation]")
     parser.add_argument("--weight-decay", type=float, required=False, dest="weight_decay", default=0,
                         help="coefficient for penalizing l2 norm of model weights (default: 0)")
     parser.add_argument("--lr", type=float, required=False, dest="lr", default=1e-3,
