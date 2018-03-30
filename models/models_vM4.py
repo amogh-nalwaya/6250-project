@@ -52,10 +52,10 @@ class BaseModel(nn.Module):
         return self.parameters()
     
     
-class ConvEnc(BaseModel):
+class ConvEncoder(BaseModel):
 
     def __init__(self, embed_file, kernel_sizes, num_filter_maps, gpu=True, dicts=None, embed_size=100, dropout=0.5, conv_activation = "selu"):
-        super(ConvEnc, self).__init__(embed_file, dicts, dropout=dropout, embed_size=embed_size) 
+        super(ConvEncoder, self).__init__(embed_file, dicts, dropout=dropout, embed_size=embed_size) 
         
         self.kernel_sizes = kernel_sizes        
         

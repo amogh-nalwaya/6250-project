@@ -188,6 +188,7 @@ def auc_metrics(yhat_raw, y, ymic):
 #                    relevant_labels.append(i)
 
 
+    #macro-AUC: just average the auc scores
     auc_list = []
     for i in range(y.shape[1]): # ASSUMING EACH LABEL CORRESPONDS TO A COLUMN
         #only if there are true positives for this label
@@ -207,6 +208,7 @@ def auc_metrics(yhat_raw, y, ymic):
 #    for i in relevant_labels:
 #        aucs.append(roc_auc['auc_%d' % i])
 #    roc_auc['auc_macro'] = np.mean(aucs)
+
 
     #micro-AUC: just look at each individual prediction
     yhatmic = yhat_raw.ravel()

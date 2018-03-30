@@ -59,9 +59,7 @@ def train_epochs(args, model, optimizer, params, dicts):
     metrics_hist_tr = defaultdict(lambda: [])
 
     test_only = args.test_model is not None
-    
-#    unseen_code_inds = set()
-    
+        
     #train for n_epochs unless criterion metric does not improve for [patience] epochs
     for epoch in range(args.n_epochs):
         
@@ -128,7 +126,6 @@ def one_epoch(model, optimizer, epoch, n_epochs, batch_size, data_path, testing,
     """
     if not testing:
         #losses, unseen_code_inds = train(model, optimizer, Y, epoch, batch_size, data_path, gpu, version, freq_params, dicts, debug, quiet)
-        #print('num unseen codes', len(unseen_code_inds))
         
         losses = train(model, optimizer, epoch, batch_size, data_path, gpu, dicts, debug, quiet)
 
@@ -137,21 +134,12 @@ def one_epoch(model, optimizer, epoch, n_epochs, batch_size, data_path, testing,
     else:
         loss = np.nan
 
-
-    fold = 'test' if version == 'mimic2' else 'dev' # LIKELY DONT NEED
-    
-#    if epoch == n_epochs - 1:
-#        print("last epoch: testing on test and train sets")
-#        testing = True
-#        quiet = False
-    
-#    metrics = test(model, Y, epoch, batch_size, data_path, fold, gpu, version, unseen_code_inds, dicts, samples, freq_params, model_dir,
-#                   testing, debug)
+#    fold = 'test' if version == 'mimic2' else 'dev' # LIKELY DONT NEED
 
     #test on dev --> NEED TO MAKE SURE THIS IS HAPPENING ON EVERY EPOCH, PROBLY IS
     metrics = test(model, epoch, batch_size, data_path, fold, gpu, dicts, samples, model_dir, testing, debug)
     
-    
+    # NEEDED ?
     if epoch == n_epochs - 1:
         print("last epoch: testing on test and train sets")
         testing = True
@@ -180,11 +168,10 @@ def train(model, optimizer, epoch, batch_size, data_path, gpu, dicts, debug, qui
         Training loop.
         output: losses for each example for this iteration
     """
-#    num_labels = tools.get_num_labels(Y, version)
-
     losses = []
+    
     #how often to print some info to stdout
-    print_every = 25
+    print_interval = 25
 
 #    ind2w, w2ind, ind2c, c2ind = dicts[0], dicts[1], dicts[2], dicts[3]
     ind2w, w2ind = dicts[0], dicts[1]
@@ -197,7 +184,7 @@ def train(model, optimizer, epoch, batch_size, data_path, gpu, dicts, debug, qui
             break
         data, target, _ = tup
         data, target = Variable(torch.LongTensor(data)), Variable(torch.FloatTensor(target))
-#        unseen_code_inds = unseen_code_inds.difference(code_set)
+
         if gpu:
             data = data.cuda()
             target = target.cuda()
@@ -210,7 +197,7 @@ def train(model, optimizer, epoch, batch_size, data_path, gpu, dicts, debug, qui
 
         losses.append(loss.data[0])
 
-        if not quiet and batch_idx % print_every == 0:
+        if not quiet and batch_idx % print_interval == 0:
             #print the average loss of the last 100 batches
             print("Train epoch: {} [batch #{}, batch_size {}, seq length {}]\tLoss: {:.6f}".format(
                 epoch+1, batch_idx, data.size()[0], data.size()[1], np.mean(losses[-100:])))
@@ -228,13 +215,11 @@ def test(model, epoch, batch_size, data_path, fold, gpu, dicts, samples, model_d
     filename = data_path.replace('train', fold)
     print('file for evaluation: %s' % filename)
     
-#    num_labels = tools.get_num_labels(Y, version) 
-
     #initialize stuff for saving attention samples
     if samples:
         tp_file = open('%s/tp_%s_examples_%d.txt' % (model_dir, fold, epoch), 'w')
         fp_file = open('%s/fp_%s_examples_%d.txt' % (model_dir, fold, epoch), 'w')
-        window_size = model.conv.weight.data.size()[2]
+#        window_size = model.conv.weight.data.size()[2]
 
     y, yhat, yhat_raw, hids, losses = [], [], [], [], []
     
@@ -246,8 +231,10 @@ def test(model, epoch, batch_size, data_path, fold, gpu, dicts, samples, model_d
     for batch_idx, tup in tqdm(enumerate(gen)):
         if debug and batch_idx > 50:
             break
+        
 #        data, target, hadm_ids, _, descs = tup
         data, target, hadm_ids = tup
+        
         data, target = Variable(torch.LongTensor(data), volatile=True), Variable(torch.FloatTensor(target))
         if gpu:
             data = data.cuda()
@@ -262,9 +249,6 @@ def test(model, epoch, batch_size, data_path, fold, gpu, dicts, samples, model_d
         losses.append(loss.data[0])
         target_data = target.data.cpu().numpy()
         
-#        if get_attn and samples:
-#            interpret.save_samples(data, output, target_data, alpha, window_size, epoch, tp_file, fp_file, freq_params[0], dicts=dicts)          
-
         #save predictions, target, hadm ids
         yhat_raw.append(output) # NEED TO KNOW FORM OF OUTPUT
         output = np.round(output)
@@ -286,10 +270,7 @@ def test(model, epoch, batch_size, data_path, fold, gpu, dicts, samples, model_d
     #write the predictions
 #   preds_file = persistence.write_preds(yhat, model_dir, hids, fold, ind2c, yhat_raw)
     persistence.write_preds(yhat, model_dir, hids, fold, yhat_raw)
-    
-    #get metrics
-#    k = 5 if num_labels == 50 else 8 
-    
+        
 #    metrics = evaluation.all_metrics(yhat, y, k=k, yhat_raw=yhat_raw)
     metrics = evaluation.all_metrics(yhat, y, yhat_raw=yhat_raw)
     evaluation.print_metrics(metrics)
