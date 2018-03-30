@@ -307,8 +307,8 @@ if __name__ == "__main__":
                         help="path to a file holding pre-trained embeddings")
     parser.add_argument("--embed-size", type=int, required=False, dest="embed_size", default=100,
                         help="size of embedding dimension. (default: 100)")
-    parser.add_argument("--kernel-sizes", type=str, required=False, dest="kernel_sizes", default=3,
-                        help="size of convolution filter(s)/kernel(s) to use (default: 3). For multiple kernel sizes, input list (e.g. [3,4,5])")
+    parser.add_argument("--kernel-sizes", type=list, required=False, dest="kernel_sizes", default=[3],
+                        help="List of size(s) of convolution filter(s)/kernel(s) to use. Ex: [3,4,5])")
     parser.add_argument("--num-filter-maps", type=int, required=False, dest="num_filter_maps", default=50,
                         help="size of conv output (default: 50)")
     parser.add_argument("--conv-activation", type=str, required=False, dest="conv_activation", default="relu",
