@@ -38,10 +38,17 @@ def make_param_dict(args):
     """
         Make a list of parameters to save for future reference
     """
-    param_vals = [args.Y, args.filter_size, args.dropout, args.num_filter_maps, args.rnn_dim, args.cell_type, args.rnn_layers, 
-                  args.lmbda, args.command, args.weight_decay, args.version, args.data_path, args.vocab, args.embed_file, args.lr]
-    param_names = ["Y", "filter_size", "dropout", "num_filter_maps", "rnn_dim", "cell_type", "rnn_layers", "lmbda", "command",
-                   "weight_decay", "version", "data_path", "vocab", "embed_file", "lr"]
+    #param_vals = [args.Y, args.filter_size, args.dropout, args.num_filter_maps, args.rnn_dim, args.cell_type, args.rnn_layers,
+    #              args.lmbda, args.command, args.weight_decay, args.version, args.data_path, args.vocab, args.embed_file, args.lr]
+    param_vals = [
+        args.filter_size, args.dropout, args.num_filter_maps,
+        args.command, args.weight_decay, args.data_path, args.vocab,
+        args.embed_file, args.lr
+    ]
+    param_names = [
+        "filter_size", "dropout", "num_filter_maps", "command",
+        "weight_decay", "data_path", "vocab", "embed_file", "lr"
+    ]
     params = {name:val for name, val in zip(param_names, param_vals) if val is not None}
     return params
 
