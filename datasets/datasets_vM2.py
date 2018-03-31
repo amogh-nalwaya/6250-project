@@ -3,9 +3,7 @@
 """
 from collections import defaultdict
 import csv
-import math
 import numpy as np
-import sys
 
 from constants import *
 
@@ -23,18 +21,15 @@ class Batch:
         """
         #labels = set()
         hadm_id = int(row[1])
-        text = row[3] # SHOULD BE 2 WHEN CHARTTIME IS REMOVED
-        
-        #length = int(row[4]) # WHERE DOES THIS COME FROM?
-        
-#        label = int(row[3]) # NEW --> PUT LABEL IN ith (3rd?) COLUMN of FINAL DATASET
-        label = np.random.randint(0,1) # TEMP
+        text = row[2] # SHOULD BE 2 WHEN CHARTTIME IS REMOVED        
+        label = int(row[3])
                 
         #OOV words are given a unique index at end of vocab lookup
         text = [int(w2ind[w]) if w in w2ind else len(w2ind)+1 for w in text.split()]
         
         # ADDED TO REPLACE AMBIGUOUS LENGTH ASSIGNMENT ABOVE
         length = len(text)
+        #length = int(row[4]) # WHERE DOES THIS COME FROM?
                 
         #reset length
         self.max_length = max(self.max_length, length) # NEED TO PAD TO EITHER MAX LENGTH OR LONGEST DOC LENGTH (?)
@@ -73,9 +68,9 @@ def data_generator(filename, dicts, batch_size):
         Output:
             Batch containing np array of data for training loop.
     """
-    #ind2w, w2ind, ind2c, c2ind, dv_dict = dicts[0], dicts[1], dicts[2], dicts[3], dicts[5]
-    ind2w, w2ind  = dicts[0], dicts[1] # DONT NEED ind2c, c2ind, or dv_dict
-    
+    ind2w = dicts[0]
+    w2ind = dicts[1]
+                         
     with open(filename, 'r') as infile:
         r = csv.reader(infile)
         #header

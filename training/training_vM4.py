@@ -20,9 +20,8 @@ sys.path.append("/home/miller/Documents/BDH NLP/Code/Github/6250-project/dataset
 
 from constants import *
 import datasets_vM2 as datasets
-import evaluation
-import persistence
-from models import models_vM5 as models
+from evaluation import evaluation_vM2 as evaluation
+from persistence import persistence_vM1 as persistence
 import tools_vM1 as tools
 
 def main(args):
@@ -60,6 +59,8 @@ def train_epochs(args, model, optimizer, params, dicts):
     metrics_hist_tr = defaultdict(lambda: [])
 
     test_only = args.test_model is not None
+    
+    print("\n\ntest_only: " + str(test_only))
         
     #train for n_epochs unless criterion metric does not improve for [patience] epochs
     for epoch in range(args.n_epochs):
@@ -114,49 +115,41 @@ def early_stop(metrics_hist, criterion, patience):
     else:
         return False
         
-#def one_epoch(model, optimizer, Y, epoch, n_epochs, batch_size, data_path, version, freq_params, testing, dicts, model_dir, unseen_code_inds, 
-#              samples, gpu, debug, quiet):
-def one_epoch(model, optimizer, epoch, n_epochs, batch_size, data_path, testing, dicts, model_dir, samples, gpu, debug, quiet):
+def one_epoch(model, optimizer, epoch, n_epochs, batch_size, data_path, testing_only, dicts, model_dir, samples, gpu, debug, quiet):
     """
         Basically a wrapper to do a training epoch and test on dev
     """
-    if not testing:
-        #losses, unseen_code_inds = train(model, optimizer, Y, epoch, batch_size, data_path, gpu, version, freq_params, dicts, debug, quiet)
-        
+    if not testing_only:        
         losses = train(model, optimizer, epoch, batch_size, data_path, gpu, dicts, debug, quiet)
-
         loss = np.mean(losses)
         print("epoch loss: " + str(loss))
+        
     else:
         loss = np.nan
 
-#    fold = 'test' if version == 'mimic2' else 'dev' # LIKELY DONT NEED
-    fold = "val"
+    pred_fold = "val" # fold to predict on
 
     #test on dev --> NEED TO MAKE SURE THIS IS HAPPENING ON EVERY EPOCH, PROBLY IS
-    metrics = test(model, epoch, batch_size, data_path, fold, gpu, dicts, samples, model_dir, testing, debug)
-    
-    # NEEDED ?
-    if epoch == n_epochs - 1:
-        print("last epoch: testing on test and train sets")
-        testing = True
-        quiet = False    
+    metrics = test(model, epoch, batch_size, data_path, pred_fold, gpu, dicts, samples, model_dir, testing_only, debug)
+        
+#    # NEEDED ?
+#    if epoch == n_epochs - 1:
+#        print("last epoch: testing on test and train sets")
+#        testing = True
+#        quiet = False    
     
     # REPETITIVE WITH CODE ABOVE
-    if testing or epoch == n_epochs - 1:
+    if testing_only or epoch == n_epochs - 1:
         print("evaluating on test")
-#        metrics_te = test(model, Y, epoch, batch_size, data_path, "test", gpu, version, unseen_code_inds, dicts, samples, freq_params,
-#                          model_dir, True, debug)
         metrics_te = test(model, epoch, batch_size, data_path, "test", gpu, dicts, samples, model_dir, True, debug)
 
     else:
         metrics_te = defaultdict(float)
-        fpr_te = defaultdict(lambda: []) # PURPOSE?
-        tpr_te = defaultdict(lambda: [])
+#        fpr_te = defaultdict(lambda: []) # PURPOSE?
+#        tpr_te = defaultdict(lambda: [])
     metrics_tr = {'loss': loss}
     metrics_all = (metrics, metrics_te, metrics_tr)
     
-#    return metrics_all, unseen_code_inds
     return metrics_all
 
 #def train(model, optimizer, Y, epoch, batch_size, data_path, gpu, version, freq_params, dicts, debug, quiet):
@@ -170,19 +163,13 @@ def train(model, optimizer, epoch, batch_size, data_path, gpu, dicts, debug, qui
     #how often to print some info to stdout
     print_interval = 25
 
-#    ind2w, w2ind, ind2c, c2ind = dicts[0], dicts[1], dicts[2], dicts[3]
-    ind2w, w2ind = dicts[0], dicts[1]
+#    ind2w, w2ind = dicts[0], dicts[1]
 
     model.train() # PUTS MODEL IN TRAIN MODE --> don't need to return the model?
-    
-    token_list = []
-               
+                   
     gen = datasets.data_generator(data_path, dicts, batch_size)
     for batch_idx, tup in tqdm(enumerate(gen)):
-        
-        if debug and batch_idx > 50: # LIKELY NOT NEEDED
-            break
-        
+                
         data, target, hadm = tup
                 
         data, target = Variable(torch.LongTensor(data)), Variable(torch.FloatTensor(target))
@@ -208,7 +195,6 @@ def train(model, optimizer, epoch, batch_size, data_path, gpu, dicts, debug, qui
     return losses
 
 
-#def test(model, Y, epoch, batch_size, data_path, fold, gpu, version, code_inds, dicts, samples, freq_params, model_dir, testing, debug):
 def test(model, epoch, batch_size, data_path, fold, gpu, dicts, samples, model_dir, testing, debug):
 
     """
@@ -216,18 +202,16 @@ def test(model, epoch, batch_size, data_path, fold, gpu, dicts, samples, model_d
         Returns metrics
     """
     filename = data_path.replace('train', fold)
-    print('file for evaluation: %s' % filename)
+    print('\nfile for evaluation: %s' % filename)
     
     #initialize stuff for saving attention samples
     if samples:
         tp_file = open('%s/tp_%s_examples_%d.txt' % (model_dir, fold, epoch), 'w')
         fp_file = open('%s/fp_%s_examples_%d.txt' % (model_dir, fold, epoch), 'w')
-#        window_size = model.conv.weight.data.size()[2]
 
     y, yhat, yhat_raw, hids, losses = [], [], [], [], []
     
-#    ind2w, w2ind, ind2c, c2ind = dicts[0], dicts[1], dicts[2], dicts[3]
-    ind2w, w2ind = dicts[0], dicts[1]
+#    ind2w, w2ind = dicts[0], dicts[1]
 
     model.eval()
     gen = datasets.data_generator(filename, dicts, batch_size)
@@ -235,7 +219,6 @@ def test(model, epoch, batch_size, data_path, fold, gpu, dicts, samples, model_d
         if debug and batch_idx > 50:
             break
         
-#        data, target, hadm_ids, _, descs = tup
         data, target, hadm_ids = tup
         
         data, target = Variable(torch.LongTensor(data), volatile=True), Variable(torch.FloatTensor(target))
@@ -245,8 +228,7 @@ def test(model, epoch, batch_size, data_path, fold, gpu, dicts, samples, model_d
             
         model.zero_grad()
 
-#        output, loss, alpha = model(data, target, desc_data=desc_data, get_attention=get_attn)
-        output, loss, alpha = model(data, target)
+        output, loss = model(data, target) # Forward pass
 
         output = output.data.cpu().numpy()
         losses.append(loss.data[0])
@@ -254,30 +236,33 @@ def test(model, epoch, batch_size, data_path, fold, gpu, dicts, samples, model_d
         
         #save predictions, target, hadm ids
         yhat_raw.append(output) # NEED TO KNOW FORM OF OUTPUT
-        output = np.round(output)
-        y.append(target_data)
+        output = np.round(output) # Rounds to 0 for <= 0.5, up to one for > 0.5
         yhat.append(output)
+        
+        y.append(target_data)
         hids.extend(hadm_ids)
 
     if samples:
         tp_file.close()
         fp_file.close()
-
+    
     y = np.concatenate(y, axis=0)
     yhat = np.concatenate(yhat, axis=0)
     yhat_raw = np.concatenate(yhat_raw, axis=0)
+    
+    print("\nMax Prediction:")
+    print(max(yhat_raw))
 
-    print("y shape: " + str(y.shape))
-    print("yhat shape: " + str(yhat.shape))
+#    print("y shape: " + str(y.shape))
+#    print("yhat shape: " + str(yhat.shape))
 
     #write the predictions
-#   preds_file = persistence.write_preds(yhat, model_dir, hids, fold, ind2c, yhat_raw)
     persistence.write_preds(yhat, model_dir, hids, fold, yhat_raw)
         
-#    metrics = evaluation.all_metrics(yhat, y, k=k, yhat_raw=yhat_raw)
     metrics = evaluation.all_metrics(yhat, y, yhat_raw=yhat_raw)
     evaluation.print_metrics(metrics)
     metrics['loss_%s' % fold] = np.mean(losses)
+    
     return metrics
 
 if __name__ == "__main__":
@@ -320,14 +305,6 @@ if __name__ == "__main__":
                         help="optional flag to save samples of good / bad predictions")
     parser.add_argument("--quiet", dest="quiet", action="store_const", required=False, const=True,
                         help="optional flag not to print so much during training")
-#    parser.add_argument("--cell-type", type=str, choices=["lstm", "gru"], help="what kind of RNN to use (default: GRU)", dest='cell_type',
-#                        default='gru')
-#    parser.add_argument("--rnn-dim", type=int, required=False, dest="rnn_dim", default=128,
-#                        help="size of rnn hidden layer (default: 128)")
-#    parser.add_argument("--bidirectional", dest="bidirectional", action="store_const", required=False, const=True,
-#                        help="optional flag for rnn to use a bidirectional model")
-#    parser.add_argument("--rnn-layers", type=int, required=False, dest="rnn_layers", default=1,
-#                        help="number of layers for RNN models (default: 1)")
     args = parser.parse_args()
     command = ' '.join(['python'] + sys.argv)
     args.command = command

@@ -50,7 +50,21 @@ if __name__ == "__main__":
     vname = '%s/vocab.csv' % MIMIC_3_DIR
     infile = '%s/disch_full.csv' % MIMIC_3_DIR
     build_vocab.build_vocab(vocab_min, infile, vname)
+    
+#########################################################
+    ### Create Train/Val/Test sets ###
+#    fname = '%s/notes_labeled.csv' % MIMIC_3_DIR # notes_labeled is labeled version of disch_full
+#    base_name = "%s/disch" % MIMIC_3_DIR #for output
+#    tr, dv, te = concat_and_split.split_data(fname, base_name=base_name)
 
+    # Sorting by length for batching
+#    for splt in ['train', 'val', 'test']:
+#        filename = '%s/disch_%s_split.csv' % (MIMIC_3_DIR, splt)
+#        df = pd.read_csv(filename)
+#        df['length'] = df.apply(lambda row: len(str(row['TEXT']).split()), axis=1)
+#        df = df.sort_values(['length'])
+#        df.to_csv('%s/%s_full.csv' % (MIMIC_3_DIR, splt), index=False)
+#########################################################
 
     #Pre-train word embeddings - train word embeddings on all words
     w2v_file = word_embeddings.word_embeddings('full', '%s/disch_full.csv' % MIMIC_3_DIR, 100, 0, 5)
