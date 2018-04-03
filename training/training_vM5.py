@@ -22,7 +22,7 @@ from constants import *
 import datasets_vM2 as datasets
 from evaluation import evaluation_vM2 as evaluation
 from persistence import persistence_vM1 as persistence
-import tools_vM1 as tools
+from tools import tools_vM1 as tools
 
 def main(args):
     start = time.time()
@@ -42,6 +42,8 @@ def init(args):
 
     model = tools.pick_model(args, dicts)
     print(model)
+    
+    print("\nGPU: " + str(args.gpu))
 
     optimizer = optim.Adam(model.params_to_optimize(), weight_decay=args.weight_decay, lr=args.lr)
 
@@ -262,10 +264,12 @@ if __name__ == "__main__":
     parser.add_argument("n_epochs", type=int, help="number of epochs to train")
     parser.add_argument("--embed-file", type=str, required=False, dest="embed_file",
                         help="path to a file holding pre-trained embeddings")
+    parser.add_argument("--loss-weights", type=str, required=False, dest="loss_weights", default = None,
+                        help="Weights associated with neg and pos class for BCE calculation. Ex: 0.1, 1")
     parser.add_argument("--embed-size", type=int, required=False, dest="embed_size", default=100,
                         help="size of embedding dimension. (default: 100)")
     parser.add_argument("--kernel-sizes", type=list, required=False, dest="kernel_sizes", default=3,
-                        help="List of size(s) of convolution filter(s)/kernel(s) to use. Ex: 3,4,5)")
+                        help="Size(s) of convolutional filter(s)/kernel(s) to use. Ex: 3,4,5)")
     parser.add_argument("--num-filter-maps", type=int, required=False, dest="num_filter_maps", default=50,
                         help="size of conv output (default: 50)")
     parser.add_argument("--conv-activation", type=str, required=False, dest="conv_activation", default="selu",

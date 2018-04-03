@@ -40,23 +40,23 @@ def all_micro(yhatmic, ymic):
 # INSTANCE-AVERAGED
 ###################
 
-def inst_precision(yhat, y):
-    num = intersect_size(yhat, y, 1) / yhat.sum(axis=1)
-    #correct for divide-by-zeros
-    num[np.isnan(num)] = 0.
-    return np.mean(num)
-
-def inst_recall(yhat, y):
-    num = intersect_size(yhat, y, 1) / y.sum(axis=1)
-    #correct for divide-by-zeros
-    num[np.isnan(num)] = 0.
-    return np.mean(num)
-
-def inst_f1(yhat, y):
-    prec = inst_precision(yhat, y)
-    rec = inst_recall(yhat, y)
-    f1 = 2*(prec*rec)/(prec+rec)
-    return f1
+#def inst_precision(yhat, y):
+#    num = intersect_size(yhat, y, 1) / yhat.sum(axis=1)
+#    #correct for divide-by-zeros
+#    num[np.isnan(num)] = 0.
+#    return np.mean(num)
+#
+#def inst_recall(yhat, y):
+#    num = intersect_size(yhat, y, 1) / y.sum(axis=1)
+#    #correct for divide-by-zeros
+#    num[np.isnan(num)] = 0.
+#    return np.mean(num)
+#
+#def inst_f1(yhat, y):
+#    prec = inst_precision(yhat, y)
+#    rec = inst_recall(yhat, y)
+#    f1 = 2*(prec*rec)/(prec+rec)
+#    return f1
 
 ##########################################################################
 #MICRO METRICS: treat every prediction as an individual binary prediction
@@ -64,9 +64,6 @@ def inst_f1(yhat, y):
 
 def micro_accuracy(yhatmic, ymic):
     return np.sum(yhatmic == ymic) / ymic.shape[0]
-
-#def micro_accuracy(yhatmic, ymic):
-#    return intersect_size(yhatmic, ymic, 0) / union_size(yhatmic, ymic, 0)
 
 def micro_precision(yhatmic, ymic):
     if np.sum(yhatmic) == 0:
@@ -119,7 +116,7 @@ def print_metrics(metrics):
     #annoyingly complicated printing, to keep track of progress during training
         
     if "true_pos" in metrics.keys():
-        print("\nacc, prec, recall, f-measure, AUC, True Pos, False Pos, True Neg, False Neg")
+        print("\naccuracy, prec, recall, f-measure, AUC, True Pos, False Pos, True Neg, False Neg")
         print("%.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f" % (metrics["acc_micro"], metrics["prec_micro"], metrics["rec_micro"], metrics["f1_micro"], metrics["auc"], metrics["true_pos"], metrics["false_pos"],metrics["true_neg"], metrics["false_neg"]))
           
     elif "auc" in metrics.keys():

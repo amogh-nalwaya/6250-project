@@ -52,8 +52,8 @@ class BaseModel(nn.Module):
         if weights is not None:
             assert len(weights) == 2
             
-            loss = weights[1] * (target * torch.log(output)) + \
-                   weights[0] * ((1 - target) * torch.log(1 - output))
+            loss = float(weights[1]) * (target * torch.log(output)) + \
+                   float(weights[0]) * ((1 - target) * torch.log(1 - output))
                    
 #            print("New loss fx")
 #            print("Weight for negative class: " + str(weights[0]))
@@ -80,10 +80,11 @@ class BaseModel(nn.Module):
         
 class ConvEncoder(BaseModel):
 
-    def __init__(self, embed_file, kernel_sizes, num_filter_maps, gpu=True, dicts=None, embed_size=100, dropout=0.5, conv_activation = "selu"):
+    def __init__(self, embed_file, kernel_sizes, num_filter_maps, gpu=True, dicts=None, embed_size=100, dropout=0.5, conv_activation = "selu", loss_weights=None):
         super(ConvEncoder, self).__init__(embed_file, dicts, dropout=dropout, embed_size=embed_size) 
         
-        self.kernel_sizes = kernel_sizes        
+#        self.kernel_sizes = kernel_sizes      
+        self.loss_weights = loss_weights
         
         # Setting non-linear activation on feature maps
         self.conv_activation = getattr(F, conv_activation) # Equivalent to F.[conv_activation]
@@ -129,7 +130,7 @@ class ConvEncoder(BaseModel):
         yhat = F.sigmoid(x)
         y = yhat.squeeze()
 #        loss = self.get_loss(y, target)
-        loss = self.weighted_bce(y,target, [.1,1])
+        loss = self.weighted_bce(y,target, self.loss_weights)
         
         return y, loss
 
