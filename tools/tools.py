@@ -18,9 +18,9 @@ def pick_model(args, dicts):
     """
         Use args to initialize the appropriate model
     """
-    if "," in args.kernel_sizes:
-        args.kernel_sizes.remove(",") # Removing commas if multiple filter sizes passed
-    print(args.kernel_sizes)
+#    if "," in args.kernel_sizes:
+    kernel_sizes = [size for size in args.kernel_sizes if size != ","] # Removing commas if multiple filter sizes passed
+    print(kernel_sizes)
     
     if args.model == "rnn":
         model = models.VanillaRNN(args.embed_file, dicts, args.rnn_dim, args.cell_type, args.rnn_layers, args.gpu, args.embed_size,

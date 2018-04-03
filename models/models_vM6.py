@@ -41,6 +41,30 @@ class BaseModel(nn.Module):
             self.embed = nn.Embedding(vocab_size+2, embed_size)
 
 
+####### NEW #########
+
+    def weighted_bce(self, output, target, weights=None):
+        
+        '''Computes weighted binary cross entropy given predictions and ground truths (target).
+           weights: [weight_neg_class, weight_pos_class]'''
+        
+        
+        if weights is not None:
+            assert len(weights) == 2
+            
+            loss = weights[1] * (target * torch.log(output)) + \
+                   weights[0] * ((1 - target) * torch.log(1 - output))
+                   
+#            print("New loss fx")
+#            print("Weight for negative class: " + str(weights[0]))
+#            print("Weight for positive class: " + str(weights[1]))
+        else:
+            loss = target * torch.log(output) + (1 - target) * torch.log(1 - output)
+    
+        return torch.neg(torch.mean(loss))
+
+#######################################################################
+
     def get_loss(self, yhat, target, diffs=None):
         
         #calculate the BCE
@@ -104,7 +128,8 @@ class ConvEncoder(BaseModel):
         #final sigmoid to get predictions
         yhat = F.sigmoid(x)
         y = yhat.squeeze()
-        loss = self.get_loss(y, target)
+#        loss = self.get_loss(y, target)
+        loss = self.weighted_bce(y,target, [.1,1])
         
         return y, loss
 

@@ -2,16 +2,15 @@
     Various methods are kept here to keep the other code files simple
 """
 import torch
-from models import models_vM5 as models
+from models import models_vM6 as models
 
 def pick_model(args, dicts):
     """
         Use args to initialize the appropriate model
     """
     
-    if "," in args.kernel_sizes:
-        args.kernel_sizes.remove(",") # Removing commas if multiple filter sizes passed
-    print(args.kernel_sizes)
+    kernel_sizes = [size for size in args.kernel_sizes if size != ","] # Removing commas if multiple filter sizes passed
+    print(kernel_sizes)
     
     if args.model == "rnn":
         model = models.VanillaRNN(args.embed_file, dicts, args.rnn_dim, args.cell_type, args.rnn_layers, args.gpu, args.embed_size,
@@ -19,7 +18,7 @@ def pick_model(args, dicts):
     
     elif args.model == "conv_encoder":
                 
-        model = models.ConvEncoder(args.embed_file, args.kernel_sizes, args.num_filter_maps, args.gpu, dicts, args.embed_size, args.dropout)
+        model = models.ConvEncoder(args.embed_file, kernel_sizes, args.num_filter_maps, args.gpu, dicts, args.embed_size, args.dropout)
     
     elif args.model == "conv_attn":
         model = models.ConvAttnPool(Y, args.embed_file, filter_size, args.num_filter_maps, args.lmbda, args.gpu, dicts,

@@ -4,9 +4,7 @@
 """
 from collections import defaultdict
 import numpy as np
-
-from sklearn.metrics import roc_auc_score
-
+from sklearn.metrics import roc_auc_score, confusion_matrix
 from constants import *
 
 def all_metrics(yhat, y, yhat_raw=None):
@@ -97,6 +95,14 @@ def auc_metrics(yhat_raw, ymic):
     
     #micro-AUC
     yhatmic = yhat_raw.ravel()
+    roc_auc['true_neg'], roc_auc['false_pos'], roc_auc['false_neg'], roc_auc['true_pos'] = confusion_matrix(ymic, np.round(yhatmic)).ravel() # Rounding to get binary preds
+    
+    # Converting to float to allow serialization to json
+    roc_auc['true_neg'] = np.float(roc_auc['true_neg'])
+    roc_auc['false_neg'] = np.float(roc_auc['false_neg'])  
+    roc_auc['true_pos'] = np.float(roc_auc['true_pos'])  
+    roc_auc['false_pos'] = np.float(roc_auc['false_pos'])         
+           
     roc_auc["auc"] = roc_auc_score(ymic, yhatmic) # (groundTruth, Preds)
 
     return roc_auc
@@ -111,8 +117,12 @@ def intersect_size(yhat, y, axis):
 
 def print_metrics(metrics):
     #annoyingly complicated printing, to keep track of progress during training
-                
-    if "auc" in metrics.keys():
+        
+    if "true_pos" in metrics.keys():
+        print("\nacc, prec, recall, f-measure, AUC, True Pos, False Pos, True Neg, False Neg")
+        print("%.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f" % (metrics["acc_micro"], metrics["prec_micro"], metrics["rec_micro"], metrics["f1_micro"], metrics["auc"], metrics["true_pos"], metrics["false_pos"],metrics["true_neg"], metrics["false_neg"]))
+          
+    elif "auc" in metrics.keys():
         print("\naccuracy, precision, recall, f-measure, AUC")
         print("%.4f, %.4f, %.4f, %.4f, %.4f" % (metrics["acc_micro"], metrics["prec_micro"], metrics["rec_micro"], metrics["f1_micro"], metrics["auc"]))
     else:
