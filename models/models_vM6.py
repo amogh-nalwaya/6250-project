@@ -12,8 +12,9 @@ import random
 import sys
 import time
 
-sys.path.append("/home/miller/Documents/BDH NLP/Code/Github/6250-project/")
-sys.path.append("/home/miller/Documents/BDH NLP/Code/Github/6250-project/datasets/")
+#sys.path.append("/home/miller/Documents/BDH NLP/Code/Github/6250-project/")
+#sys.path.append("/home/miller/Documents/BDH NLP/Code/Github/6250-project/datasets/")
+
 from constants import *
 from dataproc import extract_wvs
 

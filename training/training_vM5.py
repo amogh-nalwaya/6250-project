@@ -14,12 +14,15 @@ import time
 from tqdm import tqdm
 from collections import defaultdict
 
-# Adding path to import files from --> need to make more general, add to constants.py
-sys.path.append("/home/miller/Documents/BDH NLP/Code/Github/6250-project/")
-sys.path.append("/home/miller/Documents/BDH NLP/Code/Github/6250-project/datasets/")
+# Adding relative path to python path
+abs_path = os.path.abspath(__file__)
+file_dir = os.path.dirname(abs_path)
+parent_dir = os.path.dirname(file_dir)
+sys.path.append(parent_dir)
+#sys.path.append("/home/miller/Documents/BDH NLP/Code/Github/6250-project/")
 
 from constants import *
-import datasets_vM2 as datasets
+from datasets import datasets_vM2 as datasets
 from evaluation import evaluation_vM2 as evaluation
 from persistence import persistence_vM1 as persistence
 from tools import tools_vM1 as tools

@@ -7,7 +7,7 @@ import gensim.models
 from tqdm import tqdm
 
 from constants import *
-import datasets_vM2 as datasets
+from datasets import datasets_vM2 as datasets
 
 import numpy as np
 
