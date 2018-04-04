@@ -42,7 +42,7 @@ def build_vocab(vocab_min, infile, vocab_filename):
         note_occur = np.zeros(400000, dtype=int)
         i = 0
         for row in reader:
-            text = row[3]
+            text = row[2]
             numwords = 0
             for term in text.split():
                 #put term in vocab if it's not there. else, get the index
