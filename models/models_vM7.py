@@ -30,8 +30,8 @@ class BaseModel(nn.Module):
             print(W.size())
             self.embed = nn.Embedding(W.size()[0], W.size()[1])
             self.embed.weight.data = W.clone()
-	    self.embed.weight.requires_grad = True
-            
+            self.embed.weight.requires_grad = True
+
         else:
             #add 2 to include UNK and PAD
             vocab_size = len(dicts[0])
@@ -40,7 +40,7 @@ class BaseModel(nn.Module):
 
 
     def weighted_bce(self, y_pred, target, weights=None):
-        
+
         '''Computes weighted binary cross entropy given predictions and ground truths (target).
            weights: [weight_neg_class, weight_pos_class]'''
         

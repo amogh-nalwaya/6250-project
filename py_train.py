@@ -24,4 +24,4 @@ var_20 = "--fc-dropout-p"
 var_21 = "0.5"
 var_22 = "--embed-file"
 var_23 = "../../mimicdata/mimic3/processed_full.embed"
-subprocess.call(shlex.split('./train_v2.sh training/training_vM6.py ../../mimicdata/mimic3/disch_summary_readmission_labels.csv ../../mimicdata/mimic3/vocab.csv conv_encoder 5 --desc new_vocab_02_1_wts --embed-dropout-bool True --embed-dropout-p 0.3 --loss-weights 0.2,1 --batch-size 50 --kernel-sizes 3,5 --num-filter-maps 100 --fc-dropout-p 0.5 --embed-file ../../mimicdata/mimic3/processed_full.embed'))
+subprocess.call(shlex.split('./train_v2.sh training/training_vM6.py ../../../Data/dis_sum_train.csv ../../../Data/vocab.csv conv_encoder 5 --desc new_vocab_02_1_wts --embed-dropout-bool True --embed-dropout-p 0.3 --loss-weights 0.2,1 --batch-size 50 --kernel-sizes 3,5 --num-filter-maps 100 --fc-dropout-p 0.5 --embed-file ../../../Data/processed_full.embed'))
