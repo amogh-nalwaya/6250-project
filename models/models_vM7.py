@@ -30,6 +30,7 @@ class BaseModel(nn.Module):
             print(W.size())
             self.embed = nn.Embedding(W.size()[0], W.size()[1])
             self.embed.weight.data = W.clone()
+	    self.embed.weight.requires_grad = True
             
         else:
             #add 2 to include UNK and PAD
