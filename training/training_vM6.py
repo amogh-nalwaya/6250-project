@@ -19,7 +19,6 @@ abs_path = os.path.abspath(__file__)
 file_dir = os.path.dirname(abs_path)
 parent_dir = os.path.dirname(file_dir)
 sys.path.append(parent_dir)
-#sys.path.append("/home/miller/Documents/BDH NLP/Code/Github/6250-project/")
 
 from constants import *
 from datasets import datasets_vM2 as datasets
@@ -71,7 +70,7 @@ def train_epochs(args, model, optimizer, params, dicts):
         
         #only test on train/test set on very last epoch
         if epoch == 0 and not args.test_model:
-            model_dir = os.path.join(MODEL_DIR, '_'.join([args.model, time.strftime('%b_%d_%H:%M', time.gmtime())]))
+            model_dir = os.path.join(MODEL_DIR, '_'.join([args.model, args.desc, time.strftime('%b_%d_%H:%M', time.gmtime())]))
             os.mkdir(model_dir) 
             
         elif args.test_model:
@@ -143,8 +142,7 @@ def one_epoch(model, optimizer, epoch, n_epochs, batch_size, data_path, testing_
 
     else:
         metrics_te = defaultdict(float)
-#        fpr_te = defaultdict(lambda: []) # PURPOSE?
-#        tpr_te = defaultdict(lambda: [])
+        
     metrics_tr = {'loss': loss}
     metrics_all = (metrics, metrics_te, metrics_tr)
     
@@ -174,7 +172,7 @@ def train(model, optimizer, epoch, batch_size, data_path, gpu, dicts, debug, qui
             target = target.cuda()
             
         optimizer.zero_grad()
-
+        
         output, loss = model(data, target) # FORWARD PASS
 
         loss.backward()
@@ -283,8 +281,12 @@ if __name__ == "__main__":
                         help="learning rate for Adam optimizer (default=1e-3)")
     parser.add_argument("--batch-size", type=int, required=False, dest="batch_size", default=16,
                         help="size of training batches")
-    parser.add_argument("--dropout", dest="dropout", type=float, required=False, default=0.5,
-                        help="optional specification of dropout (default: 0.5)")
+    parser.add_argument("--fc-dropout-p", dest="fc_dropout_p", type=float, required=False, default=0.5,
+                        help="optional specification of dropout proportion for fully connected layers")
+    parser.add_argument("--embed-dropout-p", dest="embed_dropout_p", type=float, required=False, default=0.2,
+                        help="optional specification of dropout proportion for embedding layer")
+    parser.add_argument("--embed-dropout-bool", dest="embed_dropout_bool", type=bool, required=False,
+                        help="optional specification of whether to employ dropout on embedding layer")
     parser.add_argument("--test-model", type=str, dest="test_model", required=False, help="path to a saved model to load and evaluate")
     parser.add_argument("--criterion", type=str, default='f1_micro', required=False, dest="criterion",
                         help="which metric to use for early stopping (default: f1_micro)")
@@ -300,6 +302,8 @@ if __name__ == "__main__":
                         help="optional flag to save samples of good / bad predictions")
     parser.add_argument("--quiet", dest="quiet", action="store_const", required=False, const=True,
                         help="optional flag not to print so much during training")
+    parser.add_argument("--desc", dest="desc", type=str, required=False, default = '',
+                        help="optional flag for description of training run")
     args = parser.parse_args()
     command = ' '.join(['python'] + sys.argv)
     args.command = command

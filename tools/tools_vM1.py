@@ -1,8 +1,7 @@
 """
     Various methods are kept here to keep the other code files simple
 """
-import torch
-from models import models_vM6 as models
+from models import models_vM7 as models
 
 def pick_model(args, dicts):
     """
@@ -22,7 +21,7 @@ def pick_model(args, dicts):
     
     if args.model == "conv_encoder":
                 
-        model = models.ConvEncoder(args.embed_file, kernel_sizes, args.num_filter_maps, args.gpu, dicts, args.embed_size, args.dropout, args.conv_activation, loss_weights)
+        model = models.ConvEncoder(args.embed_file, kernel_sizes, args.num_filter_maps, args.gpu, dicts, args.embed_size, args.fc_dropout_p, args.conv_activation, loss_weights, args.embed_dropout_bool, args.embed_dropout_p)
     
 #    elif args.model == "rnn":
 #        model = models.VanillaRNN(args.embed_file, dicts, args.rnn_dim, args.cell_type, args.rnn_layers, args.gpu, args.embed_size,
@@ -44,11 +43,11 @@ def make_param_dict(args):
     """
         Make a list of parameters to save for future reference
     """
-    param_vals = [args.kernel_sizes, args.dropout, args.num_filter_maps,
+    param_vals = [args.kernel_sizes, args.fc_dropout_p, args.embed_dropout_bool, args.embed_dropout_p, args.num_filter_maps,
         args.command, args.weight_decay, args.data_path,
         args.embed_file, args.lr]
     
-    param_names = ["kernel_sizes", "dropout", "num_filter_maps", "command",
+    param_names = ["kernel_sizes", "fc_dropout", "embed_dropout_bool", "embed_dropout_p", "num_filter_maps", "command",
         "weight_decay", "data_path", "embed_file", "lr"]
     params = {name:val for name, val in zip(param_names, param_vals) if val is not None}
     return params

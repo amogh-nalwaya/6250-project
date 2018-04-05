@@ -12,7 +12,7 @@ abs_path = os.path.abspath(__file__)
 file_dir = os.path.dirname(abs_path)
 parent_dir = os.path.dirname(file_dir)
 parent_dir2 = os.path.dirname(parent_dir)
-parent_dir3 = os.path.dirname(parent_dir2)
+parent_dir3 = os.path.dirname(parent_dir2) + "/Models"
 
 print("\nMODEL DIR: " + str(parent_dir3))
 

@@ -1,3 +1,1 @@
-python training/training_vM5.py ../../../Data/disch_sum_train.csv ../../../Data/vocab.csv conv_encoder 3 --loss-weights 1,10 --batch-size 50 --kernel-sizes 3,5 --num-filter-maps 50 --dropout 0.5 --embed-file ../../../Data/processed_full.embed
-python training/training_vM5.py ../../../Data/disch_sum_train.csv ../../../Data/vocab.csv conv_encoder 15 --batch-size 25 --kernel-sizes 3,5 --num-filter-maps 100 --dropout 0.5 --embed-file ../../../Data/processed_full.embed
-
+python training/training_vM6.py ../../../Data/dis_sum_train.csv ../../../Data/vocab.csv conv_encoder 5 --desc new_vocab --embed-dropout-bool True --embed-dropout-p 0.3 --loss-weights 1,10 --batch-size 50 --kernel-sizes 3,5 --num-filter-maps 100 --fc-dropout-p 0.5 --embed-file ../../../Data/processed_full.embed
