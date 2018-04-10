@@ -47,7 +47,20 @@ def save_everything(args, metrics_hist_all, model, model_dir, params, criterion)
     """
     if args.test_model:
         return 
+    
+#    print(metrics_hist_all)
+#    
+#    for i in range(len(metrics_hist_all)):
+#        
+#        for key in metrics_hist_all[i].keys():
+#            
+#            print("Key: " + str(key))
+#            print("key type: " + str(type(metrics_hist_all[i][key][0])))
+#            print("----------------------")
+        
     save_metrics(metrics_hist_all, model_dir)
+    
+    #save_metrics(metrics_hist_all, model_dir)
     params['model_dir'] = model_dir
     save_params_dict(params)
 

@@ -95,12 +95,15 @@ def auc_metrics(yhat_raw, ymic):
     roc_auc['true_neg'], roc_auc['false_pos'], roc_auc['false_neg'], roc_auc['true_pos'] = confusion_matrix(ymic, np.round(yhatmic)).ravel() # Rounding to get binary preds
     
     # Converting to float to allow serialization to json
-    roc_auc['true_neg'] = np.float(roc_auc['true_neg'])
-    roc_auc['false_neg'] = np.float(roc_auc['false_neg'])  
-    roc_auc['true_pos'] = np.float(roc_auc['true_pos'])  
-    roc_auc['false_pos'] = np.float(roc_auc['false_pos'])         
+    roc_auc['true_neg'] = np.float64(roc_auc['true_neg'])
+    roc_auc['false_neg'] = np.float64(roc_auc['false_neg'])  
+    roc_auc['true_pos'] = np.float64(roc_auc['true_pos'])  
+    roc_auc['false_pos'] = np.float64(roc_auc['false_pos'])   
+
+    print("Type of auc :")
+    print( type(roc_auc['false_pos']) )    
            
-    roc_auc["auc"] = roc_auc_score(ymic, yhatmic) # (groundTruth, Preds)
+    roc_auc["auc"] = roc_auc_score(ymic, yhatmic) # (groundTruth, preds)
 
     return roc_auc
 

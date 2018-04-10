@@ -78,7 +78,7 @@ def train_epochs(args, model, optimizer, params, dicts):
             model_dir = os.getcwd() #just save things to where this script was called
             
         metrics_all = one_epoch(model, optimizer, epoch, args.n_epochs, args.batch_size, args.data_path,test_only, dicts, model_dir, 
-                                                  args.samples, args.gpu, args.debug, args.quiet)
+                                                  args.gpu, args.quiet)
 
         # DISTRIBUTING results from metrics_all to respective dicts
         for name in metrics_all[0].keys():
@@ -118,12 +118,12 @@ def early_stop(metrics_hist, criterion, patience):
     else:
         return False
         
-def one_epoch(model, optimizer, epoch, n_epochs, batch_size, data_path, testing_only, dicts, model_dir, samples, gpu, debug, quiet):
+def one_epoch(model, optimizer, epoch, n_epochs, batch_size, data_path, testing_only, dicts, model_dir, gpu, quiet):
     """
         Basically a wrapper to do a training epoch and test on dev
     """
     if not testing_only:        
-        losses = train(model, optimizer, epoch, batch_size, data_path, gpu, dicts, debug, quiet)
+        losses = train(model, optimizer, epoch, batch_size, data_path, gpu, dicts, quiet)
         loss = np.float64(np.mean(losses))
         print("epoch loss: " + str(loss))
         
@@ -132,11 +132,11 @@ def one_epoch(model, optimizer, epoch, n_epochs, batch_size, data_path, testing_
 
     pred_fold = "val" # fold to predict on
 
-    metrics = test(model, epoch, batch_size, data_path, pred_fold, gpu, dicts, samples, model_dir, testing_only, debug)
+    metrics = test(model, epoch, batch_size, data_path, pred_fold, gpu, dicts, samples, model_dir, testing_only)
     
     if testing_only or epoch == n_epochs - 1:
         print("evaluating on test")
-        metrics_te = test(model, epoch, batch_size, data_path, "test", gpu, dicts, samples, model_dir, True, debug)
+        metrics_te = test(model, epoch, batch_size, data_path, "test", gpu, dicts, samples, model_dir, True)
 
     else:
         metrics_te = defaultdict(float)
@@ -146,7 +146,7 @@ def one_epoch(model, optimizer, epoch, n_epochs, batch_size, data_path, testing_
     
     return metrics_all
 
-def train(model, optimizer, epoch, batch_size, data_path, gpu, dicts, debug, quiet):
+def train(model, optimizer, epoch, batch_size, data_path, gpu, dicts, quiet):
     """
         Training loop.
         output: losses for each example for this iteration
@@ -186,7 +186,7 @@ def train(model, optimizer, epoch, batch_size, data_path, gpu, dicts, debug, qui
     return losses
 
 
-def test(model, epoch, batch_size, data_path, fold, gpu, dicts, samples, model_dir, testing, debug):
+def test(model, epoch, batch_size, data_path, fold, gpu, dicts, samples, model_dir, testing):
 
     """
         Testing loop.
@@ -195,17 +195,12 @@ def test(model, epoch, batch_size, data_path, fold, gpu, dicts, samples, model_d
     filename = data_path.replace('train', fold)
     print('\nfile for evaluation: %s' % filename)
     
-    #initialize stuff for saving attention samples
-    if samples:
-        tp_file = open('%s/tp_%s_examples_%d.txt' % (model_dir, fold, epoch), 'w')
-        fp_file = open('%s/fp_%s_examples_%d.txt' % (model_dir, fold, epoch), 'w')
-
     y, yhat, yhat_raw, hids, losses = [], [], [], [], []
     
     model.eval()
     gen = datasets.data_generator(filename, dicts, batch_size)
     for batch_idx, tup in tqdm(enumerate(gen)):
-        if debug and batch_idx > 50:
+        if batch_idx > 50:
             break
         
         data, target, hadm_ids = tup
@@ -261,8 +256,10 @@ if __name__ == "__main__":
     parser.add_argument("n_epochs", type=int, help="number of epochs to train")
     parser.add_argument("--embed-file", type=str, required=False, dest="embed_file",
                         help="path to a file holding pre-trained embeddings")
-    parser.add_argument("--loss-weights", type=str, required=False, dest="loss_weights", default = None,
-                        help="Weights associated with neg and pos class for BCE calculation. Ex: 0.1, 1")
+    parser.add_argument("--loss", type=str, required=False, dest="loss", default = "BCE",
+                        help="Loss function to use, either BCE or margin_ranking_loss")
+    parser.add_argument("--bce-weights", type=str, required=False, dest="bce_weights", default = None,
+                        help="Weights applied to negative and positive classes respectively for Binary Cross entropy loss. Ex: 0.1, 1 --> 10x more weight to positive instances")
     parser.add_argument("--embed-size", type=int, required=False, dest="embed_size", default=100,
                         help="size of embedding dimension. (default: 100)")
     parser.add_argument("--kernel-sizes", type=list, required=False, dest="kernel_sizes", default=3,
@@ -286,16 +283,10 @@ if __name__ == "__main__":
     parser.add_argument("--test-model", type=str, dest="test_model", required=False, help="path to a saved model to load and evaluate")
     parser.add_argument("--criterion", type=str, default='f1_micro', required=False, dest="criterion",
                         help="which metric to use for early stopping (default: f1_micro)")
-    parser.add_argument("--patience", type=int, default=3, required=False,
+    parser.add_argument("--patience", type=int, default=2, required=False,
                         help="how many epochs to wait for improved criterion metric before early stopping (default: 3)")
     parser.add_argument("--gpu", dest="gpu", action="store_const", required=False, const=True,
                         help="optional flag to use GPU if available")
-    parser.add_argument("--debug", dest="debug", action="store_const", required=False, const=True,
-                        help="optional flag to set debug mode (run train/test for only 50 batches)")
-    parser.add_argument("--stack-filters", dest="stack_filters", action="store_const", required=False, const=True,
-                        help="optional flag for multi_conv_attn to instead use concatenated filter outputs, rather than pooling over them")
-    parser.add_argument("--samples", dest="samples", action="store_const", required=False, const=True,
-                        help="optional flag to save samples of good / bad predictions")
     parser.add_argument("--quiet", dest="quiet", action="store_const", required=False, const=True,
                         help="optional flag not to print so much during training")
     parser.add_argument("--desc", dest="desc", type=str, required=False, default = '',
