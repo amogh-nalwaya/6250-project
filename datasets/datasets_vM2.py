@@ -13,7 +13,7 @@ class Batch:
         self.labels = []
         self.hadm_ids = []
         self.max_length = 0 # Max length of doc in current batch
-        self.cutoff_length = 2500
+        self.cutoff_length = 3000
 
     def add_instance(self, row, w2ind):
         """

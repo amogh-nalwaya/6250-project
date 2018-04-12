@@ -39,7 +39,7 @@ def pick_model(args, dicts):
 
     if args.gpu:
         model.cuda()
-        
+                
     return model
 
 def make_param_dict(args):

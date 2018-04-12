@@ -11,6 +11,7 @@ import os
 import numpy as np
 import sys
 import time
+from tqdm import tqdm
 from collections import defaultdict
 
 # Adding relative path to python path
@@ -75,12 +76,9 @@ def train_epochs(args, model, optimizer, params, dicts):
         elif args.test_model:
             
             model_dir = os.getcwd() #just save things to where this script was called
-        
-        start = time.time()
+            
         metrics_all = one_epoch(model, optimizer, epoch, args.n_epochs, args.batch_size, args.data_path,test_only, dicts, model_dir, 
                                                   args.gpu, args.quiet)
-        end = time.time()
-        print("\nEpoch Duration: " + str(end-start))
 
         # DISTRIBUTING results from metrics_all to respective dicts
         for name in metrics_all[0].keys():
@@ -161,8 +159,8 @@ def train(model, optimizer, epoch, batch_size, data_path, gpu, dicts, quiet):
     model.train() # PUTS MODEL IN TRAIN MODE
                    
     gen = datasets.data_generator(data_path, dicts, batch_size)
-    for batch_idx, tup in enumerate(gen):
-
+    for batch_idx, tup in tqdm(enumerate(gen)):
+                
         data, target, hadm = tup
                 
         data, target = Variable(torch.LongTensor(data)), Variable(torch.FloatTensor(target))
@@ -201,7 +199,7 @@ def test(model, epoch, batch_size, data_path, fold, gpu, dicts, model_dir, testi
     
     model.eval()
     gen = datasets.data_generator(filename, dicts, batch_size)
-    for batch_idx, tup in enumerate(gen):
+    for batch_idx, tup in tqdm(enumerate(gen)):
         if batch_idx > 50:
             break
         
