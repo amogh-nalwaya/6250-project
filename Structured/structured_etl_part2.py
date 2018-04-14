@@ -31,8 +31,7 @@ def svmlight(testvec, label):
     try:
         sortedtestvec = tuple(sorted(testvec, key=lambda item: item[0]))
         for i in sortedtestvec:
-            if i[0] not in {34031, 37927, 23502, 23523, 1461, 1459}:
-                writestring = writestring + " " + str(i[0])+ ":" + str(i[1])
+            writestring = writestring + " " + str(i[0])+ ":" + str(i[1])
     except TypeError:
         writestring = writestring + " " + str(testvec[0])+ ":" + str(testvec[1])
     return writestring
