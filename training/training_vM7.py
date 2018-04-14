@@ -202,8 +202,6 @@ def test(model, epoch, batch_size, data_path, fold, gpu, dicts, model_dir, testi
     model.eval()
     gen = datasets.data_generator(filename, dicts, batch_size)
     for batch_idx, tup in enumerate(gen):
-        if batch_idx > 50:
-            break
         
         data, target, hadm_ids = tup
         
