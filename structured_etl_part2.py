@@ -40,5 +40,13 @@ def svmlight(testvec, label):
 df["svmlight"] = np.vectorize(svmlight)(df[1],df["test"])
 print("svmlight created")
 
-df[["svmlight"]].to_csv("data.svmlight", index = False, header = False)
+
+sortedids = pd.read_csv("subj_hadm_ids_sorted.csv")
+print("sorted ids read")
+
+dffinal = sortedids.merge(df, how = "inner", left_on = "HADM_ID", right_on = 0)
+del dffinal["HADM_ID"]
+
+
+dffinal[["svmlight"]].to_csv("data.svmlight", index = False, header = False)
 print("done")
