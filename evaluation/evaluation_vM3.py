@@ -41,7 +41,6 @@ def micro_accuracy(yhatmic, ymic):
 
 def micro_precision(yhatmic, ymic):
     if np.sum(yhatmic) == 0:
-        print("Predicted all 0s, precision is null (0/0+0)")
         return 0
     else:
         return intersect_size(yhatmic, ymic, 0) / yhatmic.sum(axis=0)
@@ -66,36 +65,33 @@ def find_opt_thresh_f1(yhat_raw, y, min_thresh, max_thresh, num_thresh):
     thresh_list = list(np.linspace(min_thresh,max_thresh,num_thresh))
     
     for thresh in thresh_list:        
-        yhat = np.where(yhat_raw > thresh, 1, 0) # Binarization of preds
+        yhat = np.where(yhat_raw > thresh, 1, 0) # Thresholding of preds
         f1 = micro_f1(yhat, y)
         
-        if f1 > max_f1:
+        if f1 >= max_f1:
             max_f1 = f1
             max_thresh_ = thresh
             
     return max_f1, max_thresh_
     
     
-def auc_metrics(yhat_raw, ymic):
+def auc_metrics(yhat_raw, y, thresh):
     if yhat_raw.shape[0] <= 1:
         return
     
     roc_auc = {}
     
     #micro-AUC
-    yhatmic = yhat_raw.ravel()
-    roc_auc['true_neg'], roc_auc['false_pos'], roc_auc['false_neg'], roc_auc['true_pos'] = confusion_matrix(ymic, np.round(yhatmic)).ravel() # Rounding to get binary preds
+    yhat_bin = np.where(yhat_raw > thresh, 1, 0)
+    roc_auc['true_neg'], roc_auc['false_pos'], roc_auc['false_neg'], roc_auc['true_pos'] = confusion_matrix(y, yhat_bin).ravel()
     
     # Converting to float to allow serialization to json
     roc_auc['true_neg'] = np.float64(roc_auc['true_neg'])
     roc_auc['false_neg'] = np.float64(roc_auc['false_neg'])  
     roc_auc['true_pos'] = np.float64(roc_auc['true_pos'])  
     roc_auc['false_pos'] = np.float64(roc_auc['false_pos'])   
-
-#    print("Type of auc :")
-#    print( type(roc_auc['false_pos']) )    
            
-    roc_auc["auc"] = roc_auc_score(ymic, yhatmic) # (groundTruth, preds)
+    roc_auc["auc"] = roc_auc_score(y, yhat_raw) # (groundTruth, preds)
 
     return roc_auc
 
@@ -111,7 +107,7 @@ def print_metrics(metrics):
     #annoyingly complicated printing, to keep track of progress during training
         
     if "true_pos" in metrics.keys():
-        print("\n f-1, opt_thresh, AUC,   acc, prec, recall, True Pos, False Pos, True Neg, False Neg")
+        print("\n f-1, opt_thresh, AUC,   acc,   prec, recall,  True P,  False P, True N, False N")
         print("%.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f" % (metrics["f1_micro"], metrics["opt_f1_thresh_micro"], metrics["auc"], metrics["acc_micro"], metrics["prec_micro"], metrics["rec_micro"], metrics["true_pos"], metrics["false_pos"],metrics["true_neg"], metrics["false_neg"]))
           
     elif "auc" in metrics.keys():
