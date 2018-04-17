@@ -4,7 +4,6 @@
 import torch
 import torch.optim as optim
 from torch.autograd import Variable
-
 import csv
 import argparse
 import os 
@@ -12,6 +11,8 @@ import numpy as np
 import sys
 import time
 from collections import defaultdict
+from sklearn.datasets import load_svmlight_file
+from sklearn.preprocessing import MaxAbsScaler
 
 # Adding relative path to python path
 abs_path = os.path.abspath(__file__)
@@ -23,12 +24,12 @@ from constants import *
 from datasets import datasets_vM2 as datasets
 from evaluation import evaluation_vM3 as evaluation
 from persistence import persistence_vM2 as persistence
-from tools import tools_vM1 as tools
+from tools import tools_vM2 as tools
 
 def main(args):
     start = time.time()
-    args, model, optimizer, params, dicts = init(args)
-    epochs_trained = train_epochs(args, model, optimizer, params, dicts)
+    args, model, optimizer, params, dicts, struc_feats, struc_labels = init(args)
+    epochs_trained = train_epochs(args, model, optimizer, params, dicts, struc_feats, struc_labels)
     print("TOTAL ELAPSED TIME FOR %s MODEL AND %d EPOCHS: %f" % (args.model, epochs_trained, time.time() - start))
 
 def init(args):
@@ -40,8 +41,14 @@ def init(args):
 
     # LOAD VOCAB DICTS
     dicts = datasets.load_vocab_dict(args.vocab_path)
+    
+    ## Loading structured data --> need to figure out best way to do this
+    X, y = load_svmlight_file(args.struc_data_path)
+    print("struc data loaded")
+    
+    num_struc_feats = X.shape[1]
 
-    model = tools.pick_model(args, dicts)
+    model = tools.pick_model(args, dicts, num_struc_feats)
     print(model)
     
     print("\nGPU: " + str(args.gpu))
@@ -50,9 +57,9 @@ def init(args):
 
     params = tools.make_param_dict(args)
     
-    return args, model, optimizer, params, dicts
+    return args, model, optimizer, params, dicts, X, y
 
-def train_epochs(args, model, optimizer, params, dicts):
+def train_epochs(args, model, optimizer, params, dicts, struc_feats, struc_labels):
     """
         Main loop. does train and test
     """
@@ -64,6 +71,25 @@ def train_epochs(args, model, optimizer, params, dicts):
     
     print("\n\ntest_only: " + str(test_only))
         
+    # Converting to csr sparse matrix form
+    X = struc_feats.tocsr()
+    
+    print(X.shape[0])
+    
+    # Splitting into train, val and test --> need idx values passed as args
+    X_train = X[ : args.len_train]
+    y_train = struc_labels[ : args.len_train]
+    
+    X_val = X[args.len_train : args.len_train + args.len_val]
+    X_test = X[args.len_train + args.len_val : args.len_train + args.len_val + args.len_test]
+            
+    # Standardizing features
+    scaler = MaxAbsScaler().fit(X_train)
+    X_train_std = scaler.transform(X_train)
+    X_val_std = scaler.transform(X_val)
+    X_test_std = scaler.transform(X_test)
+    ################################
+
     #train for n_epochs unless criterion metric does not improve for [patience] epochs
     for epoch in range(args.n_epochs):
         
@@ -74,11 +100,11 @@ def train_epochs(args, model, optimizer, params, dicts):
             
         elif args.test_model:
             
-            model_dir = os.getcwd() #just save things to where this script was called
+            model_dir = os.getcwd() #just save things to where this script was called       
         
         start = time.time()
         metrics_all = one_epoch(model, optimizer, epoch, args.n_epochs, args.batch_size, args.data_path,test_only, dicts, model_dir, 
-                                                  args.gpu, args.quiet)
+                                                  args.gpu, args.quiet, X_train_std, X_val_std, X_test_std, y_train, args.train_frac)
         end = time.time()
         print("\nEpoch Duration: " + str(end-start))
 
@@ -120,12 +146,14 @@ def early_stop(metrics_hist, criterion, patience):
     else:
         return False
         
-def one_epoch(model, optimizer, epoch, n_epochs, batch_size, data_path, testing_only, dicts, model_dir, gpu, quiet):
+def one_epoch(model, optimizer, epoch, n_epochs, batch_size, data_path, testing_only, dicts, model_dir, gpu, quiet, 
+              struc_feats_train_std, struc_feats_val_std, struc_feats_test_std, struc_labels_train, train_frac):
     """
         Basically a wrapper to do a training epoch and test on dev
     """
     if not testing_only:        
-        losses = train(model, optimizer, epoch, batch_size, data_path, gpu, dicts, quiet)
+        
+        losses = train(model, optimizer, epoch, batch_size, data_path, struc_feats_train_std, struc_labels_train, gpu, dicts, quiet, train_frac)
         loss = np.float64(np.mean(losses))
         print("epoch loss: " + str(loss))
         
@@ -134,11 +162,11 @@ def one_epoch(model, optimizer, epoch, n_epochs, batch_size, data_path, testing_
 
     pred_fold = "val" # fold to predict on
 
-    metrics = test(model, epoch, batch_size, data_path, pred_fold, gpu, dicts, model_dir, testing_only)
+    metrics = test(model, epoch, batch_size, data_path, struc_feats_val_std, pred_fold, gpu, dicts, model_dir, testing_only)
     
     if testing_only or epoch == n_epochs - 1:
         print("evaluating on test")
-        metrics_te = test(model, epoch, batch_size, data_path, "test", gpu, dicts, model_dir, True)
+        metrics_te = test(model, epoch, batch_size, data_path, struc_feats_test_std, "test", gpu, dicts, model_dir, True)
 
     else:
         metrics_te = defaultdict(float)
@@ -148,7 +176,7 @@ def one_epoch(model, optimizer, epoch, n_epochs, batch_size, data_path, testing_
     
     return metrics_all
 
-def train(model, optimizer, epoch, batch_size, data_path, gpu, dicts, quiet):
+def train(model, optimizer, epoch, batch_size, data_path, struc_feats, struc_labels, gpu, dicts, quiet, train_frac): ### struc feats = full structured sparse matrix
     """
         Training loop.
         output: losses for each example for this iteration
@@ -162,22 +190,35 @@ def train(model, optimizer, epoch, batch_size, data_path, gpu, dicts, quiet):
                    
     gen = datasets.data_generator(data_path, dicts, batch_size)
     for batch_idx, tup in enumerate(gen):
-
+        
+        if batch_idx * batch_size > train_frac * struc_feats.shape[0]:
+            print("Reached {} of train set".format(train_frac))
+            break
+        
         data, target, hadm = tup
-                
-        data, target = Variable(torch.LongTensor(data)), Variable(torch.FloatTensor(target))
+        
+        batch_size_safe = min(batch_size, struc_feats.shape[0] - batch_idx * batch_size) # Avoiding going out of range
+
+        struc_data = struc_feats[batch_idx * batch_size : batch_idx * batch_size + batch_size_safe].todense()
+        struc_labels_batch = struc_labels[batch_idx * batch_size: batch_idx * batch_size + batch_size_safe] ### CAN USE THIS TO CONFIRM THAT LABELS MATCH BW STRUC AND TEXT
+        
+        if np.sum(target == struc_labels_batch) != batch_size_safe:
+            print("Labels wrong, mismatch indices")
+            break    
+                    
+        data, struc_data, target = Variable(torch.LongTensor(data)), Variable(torch.FloatTensor(struc_data)), Variable(torch.FloatTensor(target))
         
         if gpu:
             data = data.cuda()
+            struc_data = struc_data.cuda()
             target = target.cuda()
             
         optimizer.zero_grad()
         
-        output, loss = model(data, target) # FORWARD PASS
+        output, loss = model(data, struc_data, target) # FORWARD PASS
 
         loss.backward()
         optimizer.step()
-
         losses.append(loss.data[0])
 
         if not quiet and batch_idx % print_interval == 0:
@@ -188,7 +229,7 @@ def train(model, optimizer, epoch, batch_size, data_path, gpu, dicts, quiet):
     return losses
 
 
-def test(model, epoch, batch_size, data_path, fold, gpu, dicts, model_dir, testing):
+def test(model, epoch, batch_size, data_path, struc_feats, fold, gpu, dicts, model_dir, testing):
 
     """
         Testing loop.
@@ -199,21 +240,28 @@ def test(model, epoch, batch_size, data_path, fold, gpu, dicts, model_dir, testi
     
     y, yhat, yhat_raw, hids, losses = [], [], [], [], []
     
+    print(struc_feats.shape[0])
+    
     model.eval()
     gen = datasets.data_generator(filename, dicts, batch_size)
     for batch_idx, tup in enumerate(gen):
         
         data, target, hadm_ids = tup
         
-        data, target = Variable(torch.LongTensor(data), volatile=True), Variable(torch.FloatTensor(target))
+        batch_size_safe = min(batch_size, struc_feats.shape[0] - batch_idx * batch_size) # Avoiding going out of range
+                                             
+        struc_data = struc_feats[batch_idx * batch_size: batch_idx * batch_size + batch_size_safe].todense() # Only need in second index b/c batch_size_safe should be < batch_size only once
+                    
+        data, struc_data, target = Variable(torch.LongTensor(data)), Variable(torch.FloatTensor(struc_data)), Variable(torch.FloatTensor(target))
         
         if gpu:
             data = data.cuda()
+            struc_data = struc_data.cuda()
             target = target.cuda()
             
         model.zero_grad()
 
-        output, loss = model(data, target) # Forward pass
+        output, loss = model(data, struc_data, target) # Forward pass
 
         output = output.data.cpu().numpy()
         losses.append(loss.data[0]) 
@@ -234,9 +282,6 @@ def test(model, epoch, batch_size, data_path, fold, gpu, dicts, model_dir, testi
     print("\nMax Prediction:")
     print(max(yhat_raw))
 
-#    print("y shape: " + str(y.shape))
-#    print("yhat shape: " + str(yhat.shape))
-
     #write the predictions
     persistence.write_preds(yhat, model_dir, hids, fold, yhat_raw)
         
@@ -250,9 +295,16 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="train a neural network on some clinical documents")
     parser.add_argument("data_path", type=str,
                         help="path to a file containing sorted train data. dev/test splits assumed to have same name format with 'train' replaced by 'dev' and 'test'")
+    parser.add_argument("struc_data_path", type=str,
+                        help="path to a file containing sorted structured train data")
     parser.add_argument("vocab_path", type=str, help="path to a file holding vocab word list for discretizing words")
-    parser.add_argument("model", type=str, choices=["conv_encoder", "rnn", "conv_attn", "multi_conv_attn", "saved"], help="model")
+    parser.add_argument("model", type=str, choices=["conv_encoder", "mmnet"], help="model")
     parser.add_argument("n_epochs", type=int, help="number of epochs to train")
+    
+    parser.add_argument("len_train", type=int, help="number of observations in training set")
+    parser.add_argument("len_val", type=int, help="number of observations in validation set")
+    parser.add_argument("len_test", type=int, help="number of observations in the test set")
+    
     parser.add_argument("--embed-file", type=str, required=False, dest="embed_file",
                         help="path to a file holding pre-trained embeddings")
     parser.add_argument("--loss", type=str, required=False, dest="loss", default = "BCE",
@@ -274,11 +326,26 @@ if __name__ == "__main__":
     parser.add_argument("--batch-size", type=int, required=False, dest="batch_size", default=16,
                         help="size of training batches")
     parser.add_argument("--fc-dropout-p", dest="fc_dropout_p", type=float, required=False, default=0.5,
-                        help="optional specification of dropout proportion for fully connected layers")
+                        help="optional specification of dropout proportion for fully connected layers that receive feature maps as input")
     parser.add_argument("--embed-dropout-p", dest="embed_dropout_p", type=float, required=False, default=0.2,
                         help="optional specification of dropout proportion for embedding layer")
     parser.add_argument("--embed-dropout-bool", dest="embed_dropout_bool", type=bool, required=False,
                         help="optional specification of whether to employ dropout on embedding layer")
+    parser.add_argument("--struc-layer-size-list", type=str, required=False, dest="struc_layer_size_list", default=3,
+                        help="Number of units in each hidden layer Ex: 3,4,5)")
+    parser.add_argument("--struc-activation", type=str, required=False, dest="struc_activation", default="selu",
+                        help="non-linear activation to be applied to fc layers. Must match PyTorch documentation for torch.nn.functional.[conv_activation]")
+    parser.add_argument("--struc-dropout-list", type=str, required=False, dest="struc_dropout_list", default=None,
+                        help="Dropout proportion on each hidden layer in structured branch. First number assumed to correspond to first hidden layer. Ex: 0.5,0.1")
+    
+    parser.add_argument("--post-merge-layer-size-list", type=str, required=False, dest="post_merge_layer_size_list", default=None,
+                        help="Number of units in each hidden layer Ex: 3,4,5)")
+   
+    
+    parser.add_argument("--train-frac", type=float, help="fraction of training split to train on", required=False, dest="train_frac", default=1.0)
+    parser.add_argument("--test-frac", type=float, help="fraction of test split to test on", required=False, dest="test_frac", default=1.0)
+   
+    
     parser.add_argument("--test-model", type=str, dest="test_model", required=False, help="path to a saved model to load and evaluate")
     parser.add_argument("--criterion", type=str, default='f1_micro', required=False, dest="criterion",
                         help="which metric to use for early stopping (default: f1_micro)")
@@ -290,7 +357,14 @@ if __name__ == "__main__":
                         help="optional flag not to print so much during training")
     parser.add_argument("--desc", dest="desc", type=str, required=False, default = '',
                         help="optional flag for description of training run")
+    
     args = parser.parse_args()
+    
+    print(args.len_train)
+    print(args.len_val)
+    print(args.len_test)
+    print("post merge hidden layer sizes: " + str(args.post_merge_layer_size_list))
+    
     command = ' '.join(['python'] + sys.argv)
     args.command = command
     main(args)

@@ -4,8 +4,7 @@
 import csv
 import os
 import gensim.models
-from tqdm import tqdm
-
+#from tqdm import tqdm --> not available on server
 from constants import *
 from datasets import datasets_vM2 as datasets
 
@@ -36,7 +35,8 @@ def build_matrix(ind2w, wv):
     W = np.zeros((len(ind2w)+1, len(wv.word_vec(wv.index2word[0])) ))
     words = [PAD_CHAR]
     W[0][:] = np.zeros(len(wv.word_vec(wv.index2word[0])))
-    for idx, word in tqdm(ind2w.items()):
+#    for idx, word in tqdm(ind2w.items()):
+    for idx, word in ind2w.items():
         if idx >= W.shape[0]:
             break
         for i in range(len(wv.index2word)):

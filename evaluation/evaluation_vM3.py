@@ -26,7 +26,7 @@ def all_metrics(yhat_raw, y):
     metrics = {names[i] + "_micro": micro[i] for i in range(len(micro))}
 
     #AUC        
-    roc_auc = auc_metrics(yhat_raw, ymic)
+    roc_auc = auc_metrics(yhat_raw, ymic, metrics['opt_f1_thresh_micro'])
     metrics.update(roc_auc)
         
     return metrics

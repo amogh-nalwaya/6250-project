@@ -40,8 +40,8 @@ class BaseModel(nn.Module):
                    
         else:
             
-            loss = F.binary_cross_entropy(y_pred, target)
-#            loss = target * torch.log(output) + (1 - target) * torch.log(1 - output)
+#            loss = F.binary_cross_entropy(y_pred, target)
+            loss = target * torch.log(y_pred) + (1 - target) * torch.log(1 - y_pred)
     
         return torch.neg(torch.mean(loss))
     

@@ -37,6 +37,3 @@ all_data.to_csv(data_path + 'subj_hadm_ids_sorted.csv', index=False)
 
 all_data = pd.read_csv(data_path + 'subj_hadm_ids_sorted.csv')
 
-all_data.iloc[:100,:]
-
-all_data[all_data.HADM_ID == 191385]

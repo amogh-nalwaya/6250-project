@@ -64,7 +64,7 @@ for epoch in range(10):  # loop over the dataset multiple times
     i = 0
     k = 0
     batchsize = 25
-    while i < X_train.shape[0]/10:
+    while i < X_train.shape[0]/2:
         
         batch_size_safe = min(batchsize, X_train.shape[0] - i) # Avoiding going out of range
         
