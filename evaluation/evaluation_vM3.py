@@ -7,7 +7,7 @@ import numpy as np
 from sklearn.metrics import roc_auc_score, confusion_matrix
 from constants import *
 
-def all_metrics(yhat_raw, y):
+def all_metrics(yhat_raw, y, thresh = None):
     """
         Inputs:
             yhat: binarized predictions 
@@ -16,23 +16,38 @@ def all_metrics(yhat_raw, y):
         Outputs:
             dict holding relevant metrics
     """
-    names = ["acc", "prec", "rec", "f1", "opt_f1_thresh"]
-
     #micro
     ymic = y.ravel() # RAVEL = FLATTEN TO 1D
-    yhat_raw = yhat_raw.ravel() # May not need
-    micro = all_micro(yhat_raw, ymic)
-
-    metrics = {names[i] + "_micro": micro[i] for i in range(len(micro))}
-
-    #AUC        
-    roc_auc = auc_metrics(yhat_raw, ymic, metrics['opt_f1_thresh_micro'])
-    metrics.update(roc_auc)
+    yhat_raw = yhat_raw.ravel() 
+    
+    if thresh: # If binarization threshold is passed (for test set)
         
+        names = ["acc", "prec", "rec", "f1", "passed_f1_thresh"]
+        micro = all_micro(yhat_raw, ymic, thresh)
+        metrics = {names[i] + "_micro": micro[i] for i in range(len(micro))}     
+        roc_auc = auc_metrics(yhat_raw, ymic, metrics['passed_f1_thresh_micro'])
+        
+    else:
+        
+        names = ["acc", "prec", "rec", "f1", "opt_f1_thresh"]
+        micro = all_micro(yhat_raw, ymic)
+        metrics = {names[i] + "_micro": micro[i] for i in range(len(micro))}       
+        roc_auc = auc_metrics(yhat_raw, ymic, metrics['opt_f1_thresh_micro'])
+    
+    metrics.update(roc_auc)
+            
     return metrics
 
-def all_micro(yhat_raw, ymic):
-    f1, opt_thresh = find_opt_thresh_f1(yhat_raw, ymic, 0.02, 0.5, 25)
+def all_micro(yhat_raw, ymic, thresh = None):
+    
+    if thresh:
+        y_bin = np.where(yhat_raw > thresh, 1, 0)
+        f1 = micro_f1(y_bin, ymic)
+        opt_thresh = thresh
+        
+    else:
+        f1, opt_thresh = find_opt_thresh_f1(yhat_raw, ymic, 0.02, 0.5, 25)
+        
     yhatmic = np.where(yhat_raw > opt_thresh, 1, 0)
     return micro_accuracy(yhatmic, ymic), micro_precision(yhatmic, ymic), micro_recall(yhatmic, ymic), f1, opt_thresh
 
@@ -106,14 +121,11 @@ def intersect_size(yhat, y, axis):
 def print_metrics(metrics):
     #annoyingly complicated printing, to keep track of progress during training
         
-    if "true_pos" in metrics.keys():
+    if "opt_f1_thresh_micro" in metrics.keys():
         print("\n f-1, opt_thresh, AUC,   acc,   prec, recall,  True P,  False P, True N, False N")
         print("%.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f" % (metrics["f1_micro"], metrics["opt_f1_thresh_micro"], metrics["auc"], metrics["acc_micro"], metrics["prec_micro"], metrics["rec_micro"], metrics["true_pos"], metrics["false_pos"],metrics["true_neg"], metrics["false_neg"]))
           
-    elif "auc" in metrics.keys():
-        print("\naccuracy, precision, recall, f-measure, AUC")
-        print("%.4f, %.4f, %.4f, %.4f, %.4f" % (metrics["acc_micro"], metrics["prec_micro"], metrics["rec_micro"], metrics["f1_micro"], metrics["auc"]))
     else:
-        print("[MICRO] accuracy, precision, recall, f-measure")
-        print("%.4f, %.4f, %.4f, %.4f" % (metrics["acc_micro"], metrics["prec_micro"], metrics["rec_micro"], metrics["f1_micro"]))
-
+        print("\nf-1, passed_thresh, AUC,   acc,   prec, recall,  True P,  False P, True N, False N")
+        print("%.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f" % (metrics["f1_micro"], metrics["passed_f1_thresh_micro"], metrics["auc"], metrics["acc_micro"], metrics["prec_micro"], metrics["rec_micro"], metrics["true_pos"], metrics["false_pos"],metrics["true_neg"], metrics["false_neg"]))
+        

@@ -73,12 +73,14 @@ class BaseModel(nn.Module):
         
 class ConvEncoder(BaseModel):
 
-    def __init__(self, embed_file, kernel_sizes, num_filter_maps, gpu=True, dicts=None, embed_size=100, fc_dropout_p=0.5, conv_activation = "selu", bce_weights=None, embed_dropout_bool = False, embed_dropout_p = 0.2, loss = "BCE"):
+    def __init__(self, embed_file, kernel_sizes, num_filter_maps, gpu=True, dicts=None, embed_size=100, fc_dropout_p=0.5, conv_activation = "selu", 
+                 bce_weights=None, embed_dropout_bool = False, embed_dropout_p = 0.2, loss = "BCE", post_conv_fc_bool = True):
         super(ConvEncoder, self).__init__(embed_file, dicts) 
-           
+        
         self.bce_weights = bce_weights
         self.embed_dropout_bool = embed_dropout_bool
         self.loss_fx = loss
+        self.post_conv_fc_bool = post_conv_fc_bool
 
         # Setting non-linear activation on feature maps
         self.conv_activation = getattr(F, conv_activation) # Equivalent to F.[conv_activation]
@@ -93,12 +95,15 @@ class ConvEncoder(BaseModel):
             
         # dropout
         self.embed_dropout = nn.Dropout(p = embed_dropout_p)
-        self.fc_dropout = nn.Dropout(p = fc_dropout_p)
+        
+        self.maxpool_output_dim = num_filter_maps * len(kernel_sizes)
 
         # fully-connected layer         
-        self.maxpool_output_dim = num_filter_maps * len(kernel_sizes)
-        self.fc = nn.Linear(self.maxpool_output_dim, 1) 
-        xavier_uniform(self.fc.weight)
+        if self.post_conv_fc_bool:
+            self.fc_dropout = nn.Dropout(p = fc_dropout_p) # Dropout is on feature maps just prior to self.fc layer
+            self.fc = nn.Linear(self.maxpool_output_dim, 1) 
+            xavier_uniform(self.fc.weight)
+            
 
     def forward(self, x, target):
         
@@ -120,8 +125,9 @@ class ConvEncoder(BaseModel):
         x = torch.cat(filter_outputs, dim=1) if len(filter_outputs) > 1 else filter_outputs[0] # Concatenating filter outputs into 1d vector
 
         #linear output
-        x = self.fc_dropout(x) # Multiplying by 2 when dropout = 0.5? Should test
-        x = self.fc(x)
+        if self.post_conv_fc_bool:
+            x = self.fc_dropout(x) # Multiplying by 2 when dropout = 0.5? Should test
+            x = self.fc(x)
 
         yhat = F.sigmoid(x) # sigmoid to get final predictions
         y = yhat.squeeze()
@@ -139,18 +145,25 @@ class MMNet(ConvEncoder):
     def __init__(self, embed_file, kernel_sizes, num_filter_maps, gpu, dicts, embed_size, fc_dropout_p, 
                  conv_activation, bce_weights, embed_dropout_bool, embed_dropout_p, loss, 
                  struc_n_input, struc_fc_layer_size_list, struc_fc_dropout_list, struc_fc_activation,
-                 post_merge_fc_layer_size_list):
+                 post_merge_fc_layer_size_list, post_conv_fc_bool, post_conv_fc_dim):
+        
+        print(post_conv_fc_dim)
         
         # Inheriting from ConvEncoder
-        super(MMNet, self).__init__(embed_file, kernel_sizes, num_filter_maps, gpu, dicts, embed_size, fc_dropout_p, conv_activation, bce_weights, embed_dropout_bool, embed_dropout_p, loss) 
-           
-
+        super(MMNet, self).__init__(embed_file, kernel_sizes, num_filter_maps, gpu, dicts, embed_size, fc_dropout_p, 
+             conv_activation, bce_weights, embed_dropout_bool, embed_dropout_p, loss, post_conv_fc_bool) 
+         
+        if post_conv_fc_bool: # If we want a fc layer after convolving over text
+            self.fc = nn.Linear(self.maxpool_output_dim, post_conv_fc_dim) 
+            self.maxpool_output_dim = post_conv_fc_dim # Overwriting to get correct input dim for first hidden layer post merge
+        
         ##### Adding functionality for structured/feedforward branch #####
         
         self.struc_fc_layer_size_list = struc_fc_layer_size_list
         self.struc_fc_dropout_list = struc_fc_dropout_list
         self.post_merge_fc_layer_size_list = post_merge_fc_layer_size_list
         self.struc_fc_activation = getattr(F, struc_fc_activation) # Equivalent to F.[struc_fc_activation]
+        self.post_conv_fc_bool = post_conv_fc_bool
         
         # Initializing dropouts on each hidden layer
         self.struc_fc_dropouts = [nn.Dropout(p = struc_fc_dropout_list[idx]) for idx in range(len(struc_fc_dropout_list))]
@@ -211,10 +224,9 @@ class MMNet(ConvEncoder):
         
         x = torch.cat(filter_outputs, dim=1) if len(filter_outputs) > 1 else filter_outputs[0] # Concatenating filter outputs into 1d vector
                
-        ### CAN ADD FC LAYER HERE BEFORE CONCATENATION ###
-#        #linear output
-#        x = self.fc_dropout(x) # Multiplying by 2 when dropout = 0.5? Should test
-#        x = self.fc(x)
+        if self.post_conv_fc_bool:
+            x = self.fc_dropout(x) # Multiplying by 2 when dropout = 0.5? Should test
+            x = self.fc(x)
                      
         ##################################################
         
@@ -238,7 +250,7 @@ class MMNet(ConvEncoder):
         x = torch.cat((x, x_struc), 1) # Concatenating representations from convolutional and structured(feedforward) branches
         
                      
-        if len(self.post_merge_fc_layers) > 0:
+        if len(self.post_merge_fc_layer_size_list) > 0:
             
             for i in range(len(self.post_merge_fc_layers)): 
             

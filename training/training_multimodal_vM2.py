@@ -90,7 +90,7 @@ def train_epochs(args, model, optimizer, params, dicts, struc_feats, struc_label
     X_test_std = scaler.transform(X_test)
     ################################
 
-    opt_thresh = 0.5 # Placeholder, only needed when predicting on test set
+    opt_thresh = None # Placeholder, only needed when predicting on test set, updated below
 
     #train for n_epochs unless criterion metric does not improve for [patience] epochs
     for epoch in range(args.n_epochs):
@@ -120,16 +120,18 @@ def train_epochs(args, model, optimizer, params, dicts, struc_feats, struc_label
         metrics_hist_all = (metrics_hist, metrics_hist_te, metrics_hist_tr)
 
         #save metrics, model, params --> opt_thresh is only needed when predicting on test set
-        opt_thresh = persistence.save_everything(args, metrics_hist_all, model, model_dir, params, args.criterion) # SHOULD SAVE MODEL PARAMS AT EACH EPOCH, BELIEVE IS HAPPENING
+        persistence.save_everything(args, metrics_hist_all, model, model_dir, params, args.criterion) # SHOULD SAVE MODEL PARAMS AT EACH EPOCH, BELIEVE IS HAPPENING
 
         if test_only:
             break
 
         if args.criterion in metrics_hist.keys():
-            if early_stop(metrics_hist, args.criterion, args.patience):
+            if (early_stop(metrics_hist, args.criterion, args.patience)) or (epoch == args.n_epochs - 2):
                 #stop training, do tests on test and train sets, and then stop the script
-                print("%s hasn't improved in %d epochs, early stopping..." % (args.criterion, args.patience))
+                print("%s hasn't improved in %d epochs, early stopping...or about be last epoch" % (args.criterion, args.patience))
                 test_only = True
+                opt_thresh = metrics_hist["opt_f1_thresh_micro"][np.nanargmax(metrics_hist[args.criterion])]
+                print("Optimal f1 threshold: " + str(opt_thresh))
                 model = torch.load('%s/model_best_%s.pth' % (model_dir, args.criterion)) # LOADING BEST MODEL FOR FINAL TEST
                 
     return epoch+1
