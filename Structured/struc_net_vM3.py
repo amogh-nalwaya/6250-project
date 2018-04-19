@@ -80,13 +80,13 @@ def train_and_test_net(X, y, fc_network, criterion, optimizer, num_epochs, batch
     X = X.tocsr()
     
     # Splitting into train, val and test
-    X_train = X[:-5000]
-    X_val = X[-5000:-2500]
-    X_test = X[-2500:]
+    X_train = X[:-5273]
+    X_val = X[-5273:-2637]
+    X_test = X[-2637:]
         
-    y_train = y[:-5000]
-    y_val = y[-5000:-2500]
-    y_test = y[-2500:]
+    y_train = y[:-5273]
+    y_val = y[-5273:-2637]
+    y_test = y[-2637:]
     
     # Standardizing features
     scaler = MaxAbsScaler().fit(X_train)
@@ -183,14 +183,14 @@ def train_and_test_net(X, y, fc_network, criterion, optimizer, num_epochs, batch
             loss = criterion(outputs, Variable(labels))
             losses.append(loss.data)
             
-            outputs = F.sigmoid(outputs)
-            
+            outputs = F.sigmoid(outputs)            
             
 
             # Converting to numpy format
             outputs = outputs.data.cpu().numpy()
+            labels = labels.cpu().numpy()
 
-            y_true.extend(labels.numpy().flatten().tolist())
+            y_true.extend(labels.flatten().tolist())
             y_pred.extend(outputs.flatten().tolist())
             i = i + batchsize
             
@@ -223,7 +223,7 @@ def train_and_test_net(X, y, fc_network, criterion, optimizer, num_epochs, batch
             ytestsample = y_test[i:i+batch_size_safe]
         
             inputs = torch.from_numpy(Xtestsample.astype('float32'))
-            labels = torch.from_numpy(ytestsample.astype('float32')).view(-1,1)
+            #labels = torch.from_numpy(ytestsample.astype('float32')).view(-1,1)
             
             if gpu_bool:
                 inputs = inputs.cuda()
@@ -234,7 +234,7 @@ def train_and_test_net(X, y, fc_network, criterion, optimizer, num_epochs, batch
             # Converting to numpy format
             outputs = outputs.data.cpu().numpy()
             
-            y_true.extend(labels.numpy().flatten().tolist())
+            y_true.extend(np.array(ytestsample).tolist())
             y_pred.extend(outputs.flatten().tolist())
             i = i + batchsize
         
@@ -334,6 +334,8 @@ if __name__ == "__main__":
         params = defaultdict(list)
         params["dropout"] = dropouts
         params["hidden_layers"] = fc_layer_sizes[1:] # Number of inputs gets inserted at 0th index in main function
+        params["train_frac"] = args.train_frac
+        params["test_frac"] = args.test_frac
               
         metrics_dict.update(params)
                           

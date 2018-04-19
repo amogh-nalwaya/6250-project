@@ -46,7 +46,7 @@ def all_micro(yhat_raw, ymic, thresh = None):
         opt_thresh = thresh
         
     else:
-        f1, opt_thresh = find_opt_thresh_f1(yhat_raw, ymic, 0.02, 0.5, 25)
+        f1, opt_thresh = find_opt_thresh_f1(yhat_raw, ymic, 0.01, 1, 100)
         
     yhatmic = np.where(yhat_raw > opt_thresh, 1, 0)
     return micro_accuracy(yhatmic, ymic), micro_precision(yhatmic, ymic), micro_recall(yhatmic, ymic), f1, opt_thresh

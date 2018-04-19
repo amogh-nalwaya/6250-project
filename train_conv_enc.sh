@@ -1,0 +1,1 @@
+python training/training_conv_encoder_vM1.py ../../../Data/sorted_sums_matched_struc_train.csv ../../../Data/vocab.csv conv_encoder 3 --obs-limit 200 --desc new_vocab_02_1_wts --embed-dropout-bool True --embed-dropout-p 0.3 --bce-weights 0.2,1 --batch-size 50 --kernel-sizes 2,3,5 --num-filter-maps 100 --fc-dropout-p 0.5 --embed-file ../../../Data/processed_full.embed
