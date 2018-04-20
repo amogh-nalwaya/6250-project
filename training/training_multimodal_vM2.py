@@ -124,9 +124,14 @@ def train_epochs(args, model, optimizer, params, dicts, struc_feats, struc_label
 
         if test_only:
             break
+        
+        
+        if (epoch == args.n_epochs - 2):
+            opt_thresh = metrics_hist["opt_f1_thresh_micro"][np.nanargmax(metrics_hist[args.criterion])]
+            print("Optimal f1 threshold: " + str(opt_thresh))
 
         if args.criterion in metrics_hist.keys():
-            if (early_stop(metrics_hist, args.criterion, args.patience)) or (epoch == args.n_epochs - 2):
+            if (early_stop(metrics_hist, args.criterion, args.patience)):
                 #stop training, do tests on test and train sets, and then stop the script
                 print("%s hasn't improved in %d epochs, early stopping or just completed last epoch" % (args.criterion, args.patience))
                 test_only = True
@@ -229,6 +234,8 @@ def train(model, optimizer, epoch, batch_size, data_path, struc_feats, struc_lab
             #print the average loss of the last 100 batches
             print("Train epoch: {} [batch #{}, batch_size {}, seq length {}]\tLoss: {:.6f}".format(
                 epoch+1, batch_idx, data.size()[0], data.size()[1], np.mean(losses[-100:])))
+
+    del output, loss, data, target
 
     return losses
 

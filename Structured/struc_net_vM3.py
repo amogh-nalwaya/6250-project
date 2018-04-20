@@ -302,8 +302,8 @@ if __name__ == "__main__":
         parser.add_argument("num_epochs", type=int, help="number of epochs to train")
         parser.add_argument("--train-frac", type=float, help="fraction of training split to train on", required=False, dest="train_frac", default=1.0)
         parser.add_argument("--test-frac", type=float, help="fraction of test split to test on", required=False, dest="test_frac", default=1.0)
-#        parser.add_argument("--bce-weights", type=str, required=False, dest="bce_weights", default = None,
-#                            help="Weights applied to negative and positive classes respectively for Binary Cross entropy loss. Ex: 0.1, 1 --> 10x more weight to positive instances")
+        parser.add_argument("--bce-weights", type=str, required=False, dest="bce_weights", default = None,
+                            help="Weights applied to negative and positive classes respectively for Binary Cross entropy loss. Ex: 0.1, 1 --> 10x more weight to positive instances")
         parser.add_argument("--fc-layer-size-list", type=str, required=False, dest="fc_layer_size_list", default=3,
                             help="Number of units in each hidden layer Ex: 3,4,5)")
         parser.add_argument("--fc-activation", type=str, required=False, dest="fc_activation", default="selu",
