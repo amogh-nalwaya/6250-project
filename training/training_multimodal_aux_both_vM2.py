@@ -243,13 +243,18 @@ def train(model, optimizer, epoch, batch_size, data_path, struc_feats, struc_lab
                 
         loss = batch(model, data, struc_data, target, gpu, struc_aux_loss_wt, conv_aux_loss_wt)
         
+        print(loss)
+        
         optimizer.step()
         losses.append(loss)
-
-        if not quiet and batch_idx % print_interval == 0:
+        
+        print(len(losses))       
+        
+#        if not quiet and batch_idx % print_interval == 0:
             #print the average loss of the last 100 batches
-            print("Train epoch: {} [batch #{}, \tLoss: {:.6f}".format(
-                epoch+1, np.mean(losses[-100:])))
+#            print("Train epoch: {} [batch #{}, \tLoss: {:.6f}".format(
+#                epoch+1, np.mean(losses[-100:])))
+#            print(losses)
 
         gc.collect()
 

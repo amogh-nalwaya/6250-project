@@ -12,6 +12,9 @@ import numpy as np
 import sys
 import time
 from collections import defaultdict
+from functools import reduce
+import gc
+import operator as op
 
 # Adding relative path to python path
 abs_path = os.path.abspath(__file__)
@@ -103,7 +106,7 @@ def train_epochs(args, model, optimizer, params, dicts):
             opt_thresh = metrics_hist["opt_f1_thresh_micro"][np.nanargmax(metrics_hist[args.criterion])]
             print("Optimal f1 threshold: " + str(opt_thresh))
 
-        if args.criterion in metrics_hist.keys():
+        if (args.criterion in metrics_hist.keys()):
             if (early_stop(metrics_hist, args.criterion, args.patience)):
                 #stop training, do tests on test and train sets, and then stop the script
                 print("%s hasn't improved in %d epochs, early stopping or just completed last epoch" % (args.criterion, args.patience))
@@ -164,7 +167,20 @@ def train(model, optimizer, epoch, batch_size, data_path, gpu, dicts, quiet, obs
     losses = []
     
     #how often to print some info to stdout
-    print_interval = 25
+    print_interval = 50
+    
+#    data_path = data_path[:-4] + "_e1.csv"
+
+    data_path = data_path[:-4] + "_reversed.csv"
+    
+#    # Grabbing data set based on epoch number, allows for shuffling between epochs
+#    if epoch < 3:
+#        data_path = data_path[:-4] + "_e" + str(epoch + 1) + ".csv"
+#        print(data_path)
+#    else:
+#        data_path = data_path[:-4] + "_e" + str(epoch - 2) + ".csv"
+#        print(data_path)
+        
 
     model.train() # PUTS MODEL IN TRAIN MODE
                    
@@ -198,6 +214,16 @@ def train(model, optimizer, epoch, batch_size, data_path, gpu, dicts, quiet, obs
             #print the average loss of the last 100 batches
             print("Train epoch: {} [batch #{}, batch_size {}, seq length {}]\tLoss: {:.6f}".format(
                 epoch+1, batch_idx, data.size()[0], data.size()[1], np.mean(losses[-100:])))
+            
+            ### Printing memory
+            total=0
+            for obj in gc.get_objects():
+                
+                if torch.is_tensor(obj):
+                    obj_size = reduce(op.mul, obj.size()) if len(obj.size()) > 0 else 0
+#                    print(reduce(op.mul, obj.size()) if len(obj.size()) > 0 else 0, type(obj), obj.size())
+                    total += obj_size
+            print(total)
 
         del output, loss, data, target
 

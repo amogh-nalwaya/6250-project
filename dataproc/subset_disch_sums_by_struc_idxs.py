@@ -36,7 +36,7 @@ print("Size of train set: " + str(len(train)))
 print("Size of val set: " + str(len(validation)))
 print("Size of test set: " + str(len(test)))
 
-if np.sum(data.READMISSION != y) !=0
+if np.sum(data.READMISSION != y) !=0:
    print("Mismatched labels")
 
 ### Sorting by length for batching

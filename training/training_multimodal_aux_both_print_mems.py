@@ -14,6 +14,8 @@ from collections import defaultdict
 from sklearn.datasets import load_svmlight_file
 from sklearn.preprocessing import MaxAbsScaler
 import gc
+from functools import reduce
+import operator as op
 
 # Adding relative path to python path
 abs_path = os.path.abspath(__file__)
@@ -232,19 +234,31 @@ def train(model, optimizer, epoch, batch_size, data_path, struc_feats, struc_lab
         
         loss = main_loss + struc_aux_loss * struc_aux_loss_wt + conv_aux_loss * conv_aux_loss_wt
 
-        print(loss.data[0])
+#        print(loss.data[0])
 
         loss.backward()
         optimizer.step()
         losses.append(loss.data[0])
         
-        print(len(losses))
+#        print(len(losses))
 
         if not quiet and batch_idx % print_interval == 0:
             #print the average loss of the last 100 batches
             print("Train epoch: {} [batch #{}, batch_size {}, seq length {}]\tLoss: {:.6f}".format(
                 epoch+1, batch_idx, data.size()[0], data.size()[1], np.mean(losses[-100:])))
             print("Main loss, struc loss, conv loss: " + str((main_loss.data[0], struc_aux_loss.data[0], conv_aux_loss.data[0])))
+        
+            total=0
+            for obj in gc.get_objects():
+                
+                if torch.is_tensor(obj):
+                    obj_size = reduce(op.mul, obj.size()) if len(obj.size()) > 0 else 0
+#                    print(reduce(op.mul, obj.size()) if len(obj.size()) > 0 else 0, type(obj), obj.size())
+                    total += obj_size
+            print(total)
+                
+#                elif torch.is_tensor(obj.data):
+#                    print(reduce(op.mul, obj.size()) if len(obj.size()) > 0 else 0, type(obj), obj.size())
 
         del output, loss, main_loss, struc_aux_loss, conv_aux_loss, data, target, struc_data, struc_labels_batch
 
