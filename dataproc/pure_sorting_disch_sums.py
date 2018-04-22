@@ -19,19 +19,19 @@ sorted_data.to_csv(data_path + 'sorted_disch_sums_no_split.csv')
 train = pd.read_csv(data_path + "sorted_sums_matched_struc_train_full.csv")
 train.sort_values("length", inplace=True, ascending = False)
 
-#test.to_csv(data_path + 'sorted_sums_matched_struc_train_reversed.csv')
+train.to_csv(data_path + 'sorted_sums_matched_struc_train_reversed.csv', index=False)
 #test[["SUBJECT_ID", "HADM_ID"]].to_csv('sorted_sums_matched_struc_train_reversed_ids.csv')
 
 
 ### Ordering validation set ###
 val = pd.read_csv(data_path + "sorted_sums_matched_struc_val.csv")
 val.sort_values("length", inplace=True, ascending = False)
-val.to_csv(data_path + 'sorted_sums_matched_struc_val_reversed.csv')
+val.to_csv(data_path + 'sorted_sums_matched_struc_val_reversed.csv', index=False)
 
 ### Ordering test set ###
 test = pd.read_csv(data_path + "sorted_sums_matched_struc_test.csv")
 test.sort_values("length", inplace=True, ascending = False)
-test.to_csv(data_path + 'sorted_sums_matched_struc_test_reversed.csv')
+test.to_csv(data_path + 'sorted_sums_matched_struc_test_reversed.csv', index=False)
 
 
 # Combining data sets

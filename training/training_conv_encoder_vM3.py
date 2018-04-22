@@ -92,7 +92,7 @@ def train_epochs(args, model, optimizer, params, dicts):
         # DISTRIBUTING results from metrics_all to respective dicts
         for name in metrics_all[0].keys():
             metrics_hist[name].append(metrics_all[0][name])
-                    
+                       
         for name in metrics_all[1].keys():
             metrics_hist_te[name].append(metrics_all[1][name])
             
@@ -100,7 +100,18 @@ def train_epochs(args, model, optimizer, params, dicts):
             metrics_hist_tr[name].append(metrics_all[2][name])
             
         metrics_hist_all = (metrics_hist, metrics_hist_te, metrics_hist_tr)
+            
         
+        ### Writing to csv ###
+        params['kernel_sizes'] = str(params['kernel_sizes'])            
+        params['test_f1'] = metrics_hist_te['f1_micro'][0]
+        params['test_auc'] = metrics_hist_te['auc'][0]
+        params['val_auc'] = metrics_hist['auc']
+        params['val_f1'] = metrics_hist['f1_micro']
+
+        metric_df = pd.DataFrame(params)
+        metric_df.to_csv(model_dir + "/results.csv", index=False)
+            
         #save metrics, model, params
         persistence.save_everything(args, metrics_hist_all, model, model_dir, params, args.criterion) # SHOULD SAVE MODEL PARAMS AT EACH EPOCH, BELIEVE IS HAPPENING
 
@@ -174,19 +185,8 @@ def train(model, optimizer, epoch, batch_size, data_path, gpu, dicts, quiet, obs
     #how often to print some info to stdout
     print_interval = 50
     
-#    data_path = data_path[:-4] + "_e1.csv"
-
     data_path = data_path[:-4] + "_reversed.csv"
     
-#    # Grabbing data set based on epoch number, allows for shuffling between epochs
-#    if epoch < 3:
-#        data_path = data_path[:-4] + "_e" + str(epoch + 1) + ".csv"
-#        print(data_path)
-#    else:
-#        data_path = data_path[:-4] + "_e" + str(epoch - 2) + ".csv"
-#        print(data_path)
-        
-
     model.train() # PUTS MODEL IN TRAIN MODE
                    
     gen = datasets.data_generator(data_path, dicts, batch_size)
