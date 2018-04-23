@@ -44,7 +44,6 @@ class BaseModel(nn.Module):
             
             loss = F.binary_cross_entropy(y_pred, target)
 #            loss = target * torch.log(y_pred) + (1 - target) * torch.log(1 - y_pred)
-    
             return torch.mean(loss)
     
     
@@ -126,7 +125,7 @@ class ConvEncoder(BaseModel):
 
         #linear output
         if self.post_conv_fc_bool:
-            x = self.fc_dropout(x) # Multiplying by 2 when dropout = 0.5? Should test
+            x = self.fc_dropout(x) 
             x = self.fc(x)
 
         yhat = F.sigmoid(x) # sigmoid to get final predictions
@@ -145,7 +144,7 @@ class MMNet(ConvEncoder):
     def __init__(self, embed_file, kernel_sizes, num_filter_maps, gpu, dicts, embed_size, fc_dropout_p, 
                  conv_activation, bce_weights, embed_dropout_bool, embed_dropout_p, loss, 
                  struc_n_input, struc_fc_layer_size_list, struc_fc_dropout_list, struc_fc_activation,
-                 post_merge_fc_layer_size_list, post_conv_fc_bool, post_conv_fc_dim):
+                 post_merge_fc_layer_size_list, post_conv_fc_bool, post_conv_fc_dim, batch_norm_bool):
         
         print("Post conv fc dim: " + str(post_conv_fc_dim))
         
@@ -157,12 +156,13 @@ class MMNet(ConvEncoder):
             self.fc = nn.Linear(self.maxpool_output_dim, post_conv_fc_dim) 
             self.maxpool_output_dim = post_conv_fc_dim # Overwriting to get correct input dim for first hidden layer post merge
         
-        ##### Adding functionality for structured/feedforward branch #####
+        ##### Adding functionality for structured/feedforward branch and post-merge layers #####
         self.struc_fc_layer_size_list = struc_fc_layer_size_list
         self.struc_fc_dropout_list = struc_fc_dropout_list
         self.post_merge_fc_layer_size_list = post_merge_fc_layer_size_list
         self.struc_fc_activation = getattr(F, struc_fc_activation) # Equivalent to F.[struc_fc_activation]
         self.post_conv_fc_bool = post_conv_fc_bool
+        self.batch_norm_bool = batch_norm_bool
         
         ### Adding auxiliary loss functionality
         self.struc_aux_output = nn.Linear(self.struc_fc_layer_size_list[len(self.struc_fc_layer_size_list)-1], 1) # Output layer added to end of feedforward branch for auxiliary loss
@@ -184,6 +184,10 @@ class MMNet(ConvEncoder):
             self.add_module('fc_%d' % idx, fc_layer)
             fc_layer = getattr(self, 'fc_{}'.format(idx)) # ~ self.fc_i
             xavier_uniform(fc_layer.weight) # Intializing weights
+            
+        # Batch Normalization on concatenation of text/struc branches
+        if batch_norm_bool:
+            self.post_merge_bn = nn.BatchNorm1d(self.struc_fc_layer_size_list[len(self.struc_fc_layer_size_list)-1] + self.maxpool_output_dim)
             
         # If adding fc layers after concatenation of text/struc branches..
         if len(post_merge_fc_layer_size_list) > 0: 
@@ -227,11 +231,10 @@ class MMNet(ConvEncoder):
             filter_outputs.append(
                     self.conv_activation(conv_layer(x)).max(dim=2)[0]) # .max() returns 2 arrays; 0. max vals, 1. argmax (max indices across desired dimension --> dim=2 is across columns in 3d tensor)
                 
-        
         x = torch.cat(filter_outputs, dim=1) if len(filter_outputs) > 1 else filter_outputs[0] # Concatenating filter outputs into 1d vector
                
         if self.post_conv_fc_bool:
-            x = self.fc_dropout(x) # Multiplying by 2 when dropout = 0.5? Should test
+            x = self.fc_dropout(x) 
             x = self.fc(x)
                      
         conv_pred = F.sigmoid(self.conv_aux_output(x))
@@ -262,14 +265,17 @@ class MMNet(ConvEncoder):
         
         x = torch.cat((x, x_struc), 1) # Concatenating representations from convolutional and structured(feedforward) branches
         
+        if self.batch_norm_bool:
+            x = self.post_merge_bn(x)
                      
+        if self.post_conv_fc_bool: # Re-using dropout layer from end of convolutional branch
+            x = self.fc_dropout(x) 
+            
         if len(self.post_merge_fc_layer_size_list) > 0:
             
             for i in range(len(self.post_merge_fc_layers)): 
             
                 post_merge_fc_layer = getattr(self, 'post_merge_fc_{}'.format(i)) 
-#                if i < len(self.struc_fc_dropout_list): 
-#                    dropout = getattr(self, 'dropout_{}'.format(i)) # No dropout for now
                 x = self.struc_fc_activation(post_merge_fc_layer(x)) # using same activation as struc for now
         
             # Prediction 

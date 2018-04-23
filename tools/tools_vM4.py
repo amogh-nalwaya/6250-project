@@ -37,6 +37,7 @@ def pick_model(args, dicts, num_struc_feats):
                                    args.conv_activation, bce_weights, args.embed_dropout_bool, args.embed_dropout_p, args.loss, args.post_conv_fc_bool)
     
     elif args.model == "mmnet":
+        
         model = models.MMNet(args.embed_file, kernel_sizes, args.num_filter_maps, args.gpu, dicts, args.embed_size, 
                              args.fc_dropout_p, args.conv_activation, bce_weights, args.embed_dropout_bool, 
                              args.embed_dropout_p, args.loss, num_struc_feats, struc_layers, dropouts, args.struc_activation, 
