@@ -1,6 +1,6 @@
 # NLP for healthcare
 ## Predicting 30-day ICU readmissions using structured and unstructured data in MIMIC III
-## Data Processing for unstructured text
+### Data Processing for unstructured text
 * Process NOTEEVENTS to get word vectors using data_processing_script.py.
     * Write Discharge summaries using get_discharge_summaries.py
     * Build vocab from discharge summaries using build_vocab.py.
