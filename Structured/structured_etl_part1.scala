@@ -84,5 +84,5 @@ maxIndex = m.keySet.size
 //admins.take(15).foreach(println)
 //admissions.map(x => (x(2),(x(6),x(7)))).join(finalish).take(15).foreach(println)
 
-val enddata = admissions.map(x => (x(2),(x(6),x(7),x(8),x(9),x(10),x(11),x(12),x(13),x(16)))).join(finalish).map(x => (x._1, x._2._2.toList :+ (m.getOrElse(x._2._1._1,""),1.0) :+ (m.getOrElse(x._2._1._2,""),1.0):+ (m.getOrElse(x._2._1._3,""),1.0):+ (m.getOrElse(x._2._1._4,""),1.0):+ (m.getOrElse(x._2._1._5,""),1.0):+ (m.getOrElse(x._2._1._6,""),1.0):+ (m.getOrElse(x._2._1._7,""),1.0):+ (m.getOrElse(x._2._1._8,""),1.0) :+ (m.getOrElse(x._2._1._9,""),1.0)))
+val enddata = admissions.map(x => (x(2),(x(6),x(7),x(8),x(9),x(10),x(11),x(12),x(13),x(16)))).leftOuterJoin(finalish).map(x => (x._1, x._2._2.getOrElse(List()).toList :+ (m.getOrElse(x._2._1._1,""),1.0) :+ (m.getOrElse(x._2._1._2,""),1.0):+ (m.getOrElse(x._2._1._3,""),1.0):+ (m.getOrElse(x._2._1._4,""),1.0):+ (m.getOrElse(x._2._1._5,""),1.0):+ (m.getOrElse(x._2._1._6,""),1.0):+ (m.getOrElse(x._2._1._7,""),1.0):+ (m.getOrElse(x._2._1._8,""),1.0) :+ (m.getOrElse(x._2._1._9,""),1.0)))
 enddata.map(x => (x._1,x._2.groupBy(_._1).map{case (k,v)=>(k, v.map(_._2).sum)}.toList)).saveAsTextFile("file:///mnt/host/c/Users/yeswe/Documents/SP18/CSE6250/project/data/sparserep")
